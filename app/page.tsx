@@ -9,8 +9,7 @@ import {
   Palette, Building2, CalendarDays, FileCheck, UserCircle, Receipt, 
   Calculator, Briefcase, Weight, LogOut, Lock, UserPlus, Printer, 
   Droplet, Filter, Calendar, Trash2, CheckSquare, CreditCard, Download,
-  Package, // <--- Add this
-  Square ,CheckCircle2      // <--- Add this 
+  Package, Square, CheckCircle2, Menu // <--- Added Menu Icon
 } from 'lucide-react';
 
 // --- 1. CONFIGURATION ---
@@ -23,6 +22,7 @@ const CONTRACTOR_LOADS: Record<string, string[]> = {
   "MP SAMY": ["Rape Seed"]
 };
 
+// (Your full destination list is here. I have kept it collapsed for brevity, but it works the same)
 const DESTINATION_RATES = [
   { name: "Null", rate: 0 },{ name: "KK Nagar", rate: 0 },{ name: "Thirumagal", rate: 0 },{ name: "SVM", rate: 0 },{ name: "SK Samy", rate: 0 },{ name: "RGS", rate: 295 },{ name: "Moolapalayam", rate: 90 },{ name: "Perundurai", rate: 295 },{ name: "Athani", rate: 430 }, { name: "Anthiyur", rate: 430 }, { name: "Ammapettai", rate: 445 },
   { name: "Arachalur", rate: 370 }, { name: "Alangiyam", rate: 600 }, { name: "Alukuli", rate: 460 },
@@ -120,7 +120,7 @@ interface TripRecord {
   commissionValue: string;
   fuelPaidDate: string; 
   contractorPaidDate?: string; 
-  creditedAmount?: number;// NEW: For Amount Credited Page
+  creditedAmount?: number;
 }
 
 interface Vehicle {
@@ -218,6 +218,7 @@ interface Notification {
 }
 
 // --- HELPERS ---
+
 const printSection = (elementId: string, title: string) => {
   const content = document.getElementById(elementId)?.innerHTML;
   if (!content) return;
@@ -329,6 +330,9 @@ export default function LMSApp() {
   const [historyLogs, setHistoryLogs] = useState<WeeklyHistory[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
+  
+  // NEW STATE FOR MOBILE MENU
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   // --- 1. CHECK LOGIN STATUS ON LOAD ---
   useEffect(() => {
@@ -409,7 +413,7 @@ export default function LMSApp() {
           commissionValue: t.commission_value,
           fuelPaidDate: t.fuel_paid_date,
           contractorPaidDate: t.contractor_paid_date,
-  creditedAmount: t.credited_amount// NEW FIELD
+          creditedAmount: t.credited_amount // NEW FIELD
         })));
       }
 
@@ -468,47 +472,38 @@ export default function LMSApp() {
     }} />;
   }
 
-// ... inside LMSApp component ...
+  const handleDeleteTrip = async (tripId: number) => {
+    const tripToDelete = trips.find(t => t.id === tripId);
+    if (!tripToDelete) return;
 
-const handleDeleteTrip = async (tripId: number) => {
-  const tripToDelete = trips.find(t => t.id === tripId);
-  if (!tripToDelete) return;
+    if (!confirm(`Are you sure you want to delete Trip Bill No: ${tripToDelete.billNo}? \n\n⚠️ This will REVERSE the Driver's Wallet balance calculation.`)) return;
 
-  if (!confirm(`Are you sure you want to delete Trip Bill No: ${tripToDelete.billNo}? \n\n⚠️ This will REVERSE the Driver's Wallet balance calculation.`)) return;
+    const deductions = (Number(tripToDelete.advance) || 0) + 
+                       (Number(tripToDelete.loadingCharge) || 0) + 
+                       (Number(tripToDelete.unloadingCharge) || 0) + 
+                       (Number(tripToDelete.weighbridgeCharge) || 0);
+    const netAddedToWallet = (Number(tripToDelete.driverTripPay) || 0) - deductions;
 
-  // 1. Calculate the Net Pay that was added to the wallet
-  const deductions = (Number(tripToDelete.advance) || 0) + 
-                     (Number(tripToDelete.loadingCharge) || 0) + 
-                     (Number(tripToDelete.unloadingCharge) || 0) + 
-                     (Number(tripToDelete.weighbridgeCharge) || 0);
-  const netAddedToWallet = (Number(tripToDelete.driverTripPay) || 0) - deductions;
+    const driver = drivers.find(d => d.name === tripToDelete.driverName);
+    if (driver) {
+         const { error: walletError } = await supabase.rpc('increment_wallet', { row_id: driver.id, amount: -netAddedToWallet });
+         if (walletError) { alert("Error reversing wallet: " + walletError.message); return; }
+         
+         setDrivers(prev => prev.map(d => d.id === driver.id ? { ...d, walletBalance: d.walletBalance - netAddedToWallet } : d));
+    }
 
-  // 2. Reverse Wallet Balance
-  const driver = drivers.find(d => d.name === tripToDelete.driverName);
-  if (driver) {
-       const { error: walletError } = await supabase.rpc('increment_wallet', { row_id: driver.id, amount: -netAddedToWallet });
-       if (walletError) { alert("Error reversing wallet: " + walletError.message); return; }
-       
-       // UPDATE DRIVER STATE LOCALLY
-       setDrivers(prev => prev.map(d => d.id === driver.id ? { ...d, walletBalance: d.walletBalance - netAddedToWallet } : d));
-  }
+    const { error: delError } = await supabase.from('trips').delete().eq('id', tripId);
+    
+    await supabase.from('transactions').delete().ilike('description', `%${tripToDelete.billNo}%`);
 
-  // 3. Delete Trip Row
-  const { error: delError } = await supabase.from('trips').delete().eq('id', tripId);
-  
-  // 4. Try Delete Transaction (Best Effort)
-  await supabase.from('transactions').delete().ilike('description', `%${tripToDelete.billNo}%`);
+    if (delError) {
+      alert("Error deleting trip: " + delError.message);
+    } else {
+      setTrips(prev => prev.filter(t => t.id !== tripId));
+      alert("Trip Deleted & Wallet Reverted Successfully!");
+    }
+  };
 
-  if (delError) {
-    alert("Error deleting trip: " + delError.message);
-  } else {
-    // DO NOT RELOAD - UPDATE STATE DIRECTLY
-    setTrips(prev => prev.filter(t => t.id !== tripId));
-    alert("Trip Deleted & Wallet Reverted Successfully!");
-  }
-};
-
-  // --- FILTERED TRIPS LOGIC ---
   const getFilteredTrips = () => {
     if (filterReg) {
       return trips.filter(t => t.regNumber === filterReg);
@@ -521,8 +516,7 @@ const handleDeleteTrip = async (tripId: number) => {
     setCurrentView(view);
   };
 
-const renderView = () => {
-    // 1. Define the props object (This was missing)
+  const renderView = () => {
     const props = { 
         vehicles, setVehicles, 
         drivers, setDrivers, 
@@ -536,7 +530,6 @@ const renderView = () => {
         handleDeleteTrip 
     };
 
-    // 2. The Switch Statement
     switch(currentView) {
       case "dashboard": return <DashboardView {...props} />;
       case "trips": return <TripsView {...props} />;
@@ -556,6 +549,7 @@ const renderView = () => {
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-800 overflow-hidden">
+      {/* DESKTOP SIDEBAR */}
       <aside className="hidden md:flex flex-col w-64 bg-slate-900 text-white transition-all">
         <div className="p-6 border-b border-slate-800">
           <h1 className="text-2xl font-bold flex items-center gap-2"><Truck className="text-blue-500" /> <span className="tracking-tight">Trip Tally</span></h1>
@@ -582,7 +576,9 @@ const renderView = () => {
           <button onClick={handleLogout} className="flex items-center gap-2 text-red-400 hover:text-red-300 text-sm font-bold w-full p-2 rounded hover:bg-slate-800 transition-colors"><LogOut size={16}/> Logout</button>
         </div>
       </aside>
+
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+        {/* HEADER */}
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 shrink-0 relative">
           <div className="md:hidden font-bold text-lg flex items-center gap-2"><Truck className="text-blue-600"/> Trip Tally</div>
           <div className="hidden md:flex items-center gap-2 font-bold text-lg text-slate-700 capitalize">
@@ -596,6 +592,7 @@ const renderView = () => {
             </button>
             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-sm">{currentUser?.username?.charAt(0).toUpperCase() || 'A'}</div>
           </div>
+          {/* Notifications Panel */}
           {showNotifPanel && (
             <div className="absolute top-16 right-4 w-80 bg-white shadow-2xl rounded-xl border border-slate-200 z-50 animate-in fade-in slide-in-from-top-2 overflow-hidden">
               <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50"><h3 className="font-bold text-slate-800">Notifications ({notifications.length})</h3><button onClick={() => setShowNotifPanel(false)}><X size={16} className="text-slate-400 hover:text-red-500"/></button></div>
@@ -603,20 +600,52 @@ const renderView = () => {
             </div>
           )}
         </header>
+
+        {/* MAIN CONTENT AREA */}
         <main className="flex-1 overflow-y-auto p-4 pb-24 md:pb-4">
           {renderView()}
         </main>
-        <div className="md:hidden fixed bottom-0 w-full bg-white border-t border-slate-200 flex justify-around p-3 z-20 pb-safe">
-          <MobileNavItem icon={<LayoutDashboard/>} label="Home" active={currentView === "dashboard"} onClick={() => setCurrentView("dashboard")} />
-          <MobileNavItem icon={<List/>} label="Trips" active={currentView === "trips"} onClick={() => setCurrentView("trips")} />
-          <MobileNavItem icon={<Wallet/>} label="Money" active={currentView === "finance"} onClick={() => setCurrentView("finance")} />
+
+        {/* --- MOBILE "MORE" MENU POPUP --- */}
+        {showMobileMenu && (
+          <div className="md:hidden fixed bottom-20 right-4 bg-white rounded-xl shadow-2xl border border-slate-200 p-2 z-50 animate-in slide-in-from-bottom-5 flex flex-col gap-1 w-48">
+             <button onClick={() => { setCurrentView("drivers"); setShowMobileMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 w-full text-left">
+                <Users size={18} className="text-blue-600"/> Drivers
+             </button>
+             <button onClick={() => { setCurrentView("credited"); setShowMobileMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 w-full text-left">
+                <CreditCard size={18} className="text-purple-600"/> Credited
+             </button>
+             <button onClick={() => { setCurrentView("fuel"); setShowMobileMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 w-full text-left">
+                <Droplet size={18} className="text-orange-600"/> Fuel Log
+             </button>
+             <button onClick={() => { setCurrentView("history"); setShowMobileMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 w-full text-left">
+                <History size={18} className="text-slate-600"/> History
+             </button>
+          </div>
+        )}
+
+        {/* --- MOBILE BOTTOM BAR --- */}
+        <div className="md:hidden fixed bottom-0 w-full bg-white border-t border-slate-200 flex justify-around p-3 z-20 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+          <MobileNavItem icon={<LayoutDashboard size={20}/>} label="Home" active={currentView === "dashboard"} onClick={() => { setCurrentView("dashboard"); setShowMobileMenu(false); }} />
+          <MobileNavItem icon={<List size={20}/>} label="Trips" active={currentView === "trips"} onClick={() => { setCurrentView("trips"); setShowMobileMenu(false); }} />
+          <MobileNavItem icon={<Wallet size={20}/>} label="Money" active={currentView === "finance"} onClick={() => { setCurrentView("finance"); setShowMobileMenu(false); }} />
+          
+          <button onClick={() => setShowMobileMenu(!showMobileMenu)} className={`flex flex-col items-center justify-center w-16 transition-colors ${showMobileMenu ? 'text-blue-600' : 'text-slate-400'}`}>
+             <div className={`mb-1 ${showMobileMenu ? 'scale-110' : ''} transition-transform`}><Menu size={20}/></div>
+             <span className="text-[10px] font-bold">More</span>
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
+// --- SUB-COMPONENTS & VIEWS (Keep all your existing components below here) ---
+// Note: Since I cannot see your sub-components (DashboardView, TripsView, etc.) in your latest paste,
+// PLEASE ENSURE YOU DO NOT DELETE THEM. Paste the code above *replacing* the Imports and LMSApp function, 
+// but keep the views like DashboardView, TripsView, etc. that were below it.
 // --- SUB-COMPONENTS (Views) ---
+
 const DashboardView = ({ vehicles, setVehicles, drivers, setDrivers, transactions, setTransactions, trips, setTrips, setCurrentView, handleFilterSelect, setHistoryLogs }: any) => {
   const [activeModal, setActiveModal] = useState<{ type: string; data: any; vehicleId?: number } | null>(null);
   const [selectedDriverForModal, setSelectedDriverForModal] = useState<Driver | null>(null);
@@ -1125,6 +1154,7 @@ const DashboardView = ({ vehicles, setVehicles, drivers, setDrivers, transaction
     </div>
   );
 };
+
 const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
   const [selectedContractor, setSelectedContractor] = useState<string | null>(null);
   const [selectedLoadType, setSelectedLoadType] = useState<string | null>(null);
@@ -1296,6 +1326,7 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
     </div>
   );
 };
+
 const FuelView = ({ trips, filterReg, setFilterReg, setTrips }: any) => {
   
   // 1. FILTER: Exclude Bill No "0" globally for this page
@@ -1390,6 +1421,7 @@ const FuelView = ({ trips, filterReg, setFilterReg, setTrips }: any) => {
     </div>
   );
 };
+
 const TripsView = ({ trips, handleFilterSelect, handleDeleteTrip }: any) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -1479,6 +1511,7 @@ const TripsView = ({ trips, handleFilterSelect, handleDeleteTrip }: any) => {
     </div>
   );
 };
+
 const DriversView = ({ drivers, setDrivers, trips, setTrips }: any) => {
   const [isAdding, setIsAdding] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
@@ -1486,7 +1519,7 @@ const DriversView = ({ drivers, setDrivers, trips, setTrips }: any) => {
 
   const handleAddDriver = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { data, error } = await supabase.from('drivers').insert([{
+    const { data, error } = await supabase.from('drivers').insert([{ 
         name: newDriver.name, phone: newDriver.phone, license: newDriver.license, wallet_balance: 0 
     }]).select().single();
 
@@ -1566,6 +1599,7 @@ const DriversView = ({ drivers, setDrivers, trips, setTrips }: any) => {
     </div>
   );
 };
+
 const FinanceView = ({ transactions, drivers, trips, handleDeleteTrip }: any) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -1739,6 +1773,144 @@ const FinanceView = ({ transactions, drivers, trips, handleDeleteTrip }: any) =>
     </div>
   );
 };
+
+const HistoryView = ({ historyLogs }: { historyLogs: WeeklyHistory[] }) => {
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-6">
+      <h2 className="text-lg font-bold">Past Weekly Settlements</h2>
+      
+      <div className="space-y-4">
+        {historyLogs.length === 0 ? (
+          <div className="text-center text-slate-400 py-10">No history available yet.</div>
+        ) : (
+          historyLogs.map((log) => (
+            <div key={log.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              {/* --- HEADER: DISPLAYS ONLY DRIVER NAME --- */}
+              <div 
+                className="p-5 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors" 
+                onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="bg-blue-100 text-blue-600 w-10 h-10 flex items-center justify-center rounded-full font-bold shadow-sm">
+                    {log.driverName?.charAt(0).toUpperCase() || 'D'}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-800">{log.driverName}</h3>
+                    {/* Only show 'Click to view' if collapsed */}
+                    {!expandedId && <p className="text-xs text-slate-400">Click to view full settlement details</p>}
+                  </div>
+                </div>
+                <div>
+                    {expandedId === log.id ? <ChevronUp size={20} className="text-blue-500"/> : <ChevronDown size={20} className="text-slate-400"/>}
+                </div>
+              </div>
+
+              {/* --- EXPANDED SECTION --- */}
+              {expandedId === log.id && (
+                <div className="border-t border-slate-100 bg-slate-50/50 p-6 animate-in slide-in-from-top-2">
+                  
+                  {/* 1. Settlement Summary Box */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                      <div className="bg-white p-3 rounded-lg border border-slate-200">
+                         <span className="text-[10px] font-bold text-slate-400 uppercase">Settlement Date</span>
+                         <div className="text-slate-800 font-bold flex items-center gap-2">
+                            <Calendar size={14} className="text-slate-400"/> {log.settlementDate}
+                         </div>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-slate-200">
+                         <span className="text-[10px] font-bold text-slate-400 uppercase">Total Amount</span>
+                         <div className="text-green-600 font-bold text-lg">₹ {log.totalExpense.toLocaleString()}</div>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-slate-200">
+                         <span className="text-[10px] font-bold text-slate-400 uppercase">Total Trips</span>
+                         <div className="text-slate-800 font-bold">{log.trips.length} Records</div>
+                      </div>
+                   </div>
+
+                   <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                    <Truck size={16}/> Trip Details
+                   </h4>
+                   
+                   {/* 2. Table Data */}
+                   <div className="overflow-x-auto mb-6 bg-white rounded-lg border border-slate-200 shadow-sm">
+                     <table className="w-full text-sm text-left whitespace-nowrap">
+                       <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs border-b border-slate-100">
+                         <tr>
+                           <th className="px-5 py-4">DATE</th>
+                           <th className="px-5 py-4">BILL NO</th>
+                           <th className="px-5 py-4">ROUTE / LOAD</th>
+                           <th className="px-5 py-4 text-indigo-600">ADVANCE</th>
+                           <th className="px-5 py-4 text-red-600">EXPENSES</th>
+                           <th className="px-5 py-4">RENT</th>
+                           <th className="px-5 py-4 text-green-700">GROSS PAY</th>
+                           <th className="px-5 py-4 bg-blue-50 text-blue-700 border-l border-blue-100">NET ADDED</th>
+                         </tr>
+                       </thead>
+                       <tbody className="divide-y divide-slate-100 text-sm">
+                         {log.trips && log.trips.length > 0 ? (
+                           log.trips.map((trip: any) => {
+                             const drPay = Number(trip.driver_trip_pay || trip.driverTripPay) || 0;
+                             const loadChg = Number(trip.loading_charge || trip.loadingCharge) || 0;
+                             const unloadChg = Number(trip.unloading_charge || trip.unloadingCharge) || 0;
+                             const weightChg = Number(trip.weighbridge_charge || trip.weighbridgeCharge) || 0;
+                             const totalTripExpenses = loadChg + unloadChg + weightChg;
+                             const advance = Number(trip.advance) || 0;
+                             
+                             // Re-calculate net for display consistency
+                             const finalPay = drPay - (advance - totalTripExpenses);
+                             const tripRent = Number(trip.trip_total || trip.tripTotal) || 0;
+
+                             return (
+                               <tr key={trip.id} className="hover:bg-slate-50 transition-colors">
+                                 <td className="px-5 py-4 font-bold text-slate-700">{trip.date}</td>
+                                 <td className="px-5 py-4 font-mono text-slate-500">{trip.bill_no || trip.billNo}</td>
+                                 <td className="px-5 py-4">
+                                   <div className="font-bold text-slate-800 flex items-center gap-1">
+                                     ➔ {trip.to_loc || trip.to}
+                                   </div>
+                                   <div className="text-xs text-slate-500 mt-0.5">
+                                     {trip.load_type || trip.loadType} ({trip.net_weight || trip.netWeight}T)
+                                   </div>
+                                 </td>
+                                 <td className="px-5 py-4 text-indigo-600 font-bold">
+                                   ₹ {advance.toLocaleString()}
+                                 </td>
+                                 <td className="px-5 py-4 text-red-600">
+                                   <div className="font-bold">₹ {totalTripExpenses.toLocaleString()}</div>
+                                   <div className="text-[10px] text-slate-400 mt-0.5 font-mono">
+                                     L:{loadChg} / U:{unloadChg} / W:{weightChg}
+                                   </div>
+                                 </td>
+                                 <td className="px-5 py-4 text-slate-600 font-medium">
+                                   ₹ {tripRent.toLocaleString()}
+                                 </td>
+                                 <td className="px-5 py-4 text-green-700 font-bold">
+                                   ₹ {drPay.toLocaleString()}
+                                 </td>
+                                 <td className="px-5 py-4 bg-blue-50 border-l border-blue-100 text-blue-700 font-extrabold text-right">
+                                   ₹ {finalPay.toLocaleString()}
+                                 </td>
+                               </tr>
+                             );
+                           })
+                         ) : (
+                           <tr><td colSpan={12} className="p-6 text-center text-slate-400">No trips in this settlement.</td></tr>
+                         )}
+                       </tbody>
+                     </table>
+                   </div>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
 // --- HELPER COMPONENTS ---
 
 const VehicleCard = ({ data, onAction, onFilter }: { data: Vehicle, onAction: (type: string) => void, onFilter: (reg: string, view: string) => void }) => {
@@ -2052,142 +2224,7 @@ const DriverDetailsModal = ({ driver, setDrivers, setHistoryLogs, onClose }: { d
     </div>
   );
 };
-const HistoryView = ({ historyLogs }: { historyLogs: WeeklyHistory[] }) => {
-  const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <h2 className="text-lg font-bold">Past Weekly Settlements</h2>
-      
-      <div className="space-y-4">
-        {historyLogs.length === 0 ? (
-          <div className="text-center text-slate-400 py-10">No history available yet.</div>
-        ) : (
-          historyLogs.map((log) => (
-            <div key={log.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              {/* --- HEADER: DISPLAYS ONLY DRIVER NAME --- */}
-              <div 
-                className="p-5 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors" 
-                onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="bg-blue-100 text-blue-600 w-10 h-10 flex items-center justify-center rounded-full font-bold shadow-sm">
-                    {log.driverName?.charAt(0).toUpperCase() || 'D'}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-800">{log.driverName}</h3>
-                    {/* Only show 'Click to view' if collapsed */}
-                    {!expandedId && <p className="text-xs text-slate-400">Click to view full settlement details</p>}
-                  </div>
-                </div>
-                <div>
-                    {expandedId === log.id ? <ChevronUp size={20} className="text-blue-500"/> : <ChevronDown size={20} className="text-slate-400"/>}
-                </div>
-              </div>
-
-              {/* --- EXPANDED SECTION --- */}
-              {expandedId === log.id && (
-                <div className="border-t border-slate-100 bg-slate-50/50 p-6 animate-in slide-in-from-top-2">
-                  
-                  {/* 1. Settlement Summary Box */}
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                     <div className="bg-white p-3 rounded-lg border border-slate-200">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Settlement Date</span>
-                        <div className="text-slate-800 font-bold flex items-center gap-2">
-                            <Calendar size={14} className="text-slate-400"/> {log.settlementDate}
-                        </div>
-                     </div>
-                     <div className="bg-white p-3 rounded-lg border border-slate-200">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Total Amount</span>
-                        <div className="text-green-600 font-bold text-lg">₹ {log.totalExpense.toLocaleString()}</div>
-                     </div>
-                     <div className="bg-white p-3 rounded-lg border border-slate-200">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Total Trips</span>
-                        <div className="text-slate-800 font-bold">{log.trips.length} Records</div>
-                     </div>
-                  </div>
-
-                  <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                    <Truck size={16}/> Trip Details
-                  </h4>
-                  
-                  {/* 2. Table Data */}
-                  <div className="overflow-x-auto mb-6 bg-white rounded-lg border border-slate-200 shadow-sm">
-                    <table className="w-full text-sm text-left whitespace-nowrap">
-                      <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs border-b border-slate-100">
-                        <tr>
-                          <th className="px-5 py-4">DATE</th>
-                          <th className="px-5 py-4">BILL NO</th>
-                          <th className="px-5 py-4">ROUTE / LOAD</th>
-                          <th className="px-5 py-4 text-indigo-600">ADVANCE</th>
-                          <th className="px-5 py-4 text-red-600">EXPENSES</th>
-                          <th className="px-5 py-4">RENT</th>
-                          <th className="px-5 py-4 text-green-700">GROSS PAY</th>
-                          <th className="px-5 py-4 bg-blue-50 text-blue-700 border-l border-blue-100">NET ADDED</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-sm">
-                        {log.trips && log.trips.length > 0 ? (
-                          log.trips.map((trip: any) => {
-                            const drPay = Number(trip.driver_trip_pay || trip.driverTripPay) || 0;
-                            const loadChg = Number(trip.loading_charge || trip.loadingCharge) || 0;
-                            const unloadChg = Number(trip.unloading_charge || trip.unloadingCharge) || 0;
-                            const weightChg = Number(trip.weighbridge_charge || trip.weighbridgeCharge) || 0;
-                            const totalTripExpenses = loadChg + unloadChg + weightChg;
-                            const advance = Number(trip.advance) || 0;
-                            
-                            // Re-calculate net for display consistency
-                            const finalPay = drPay - (advance - totalTripExpenses);
-                            const tripRent = Number(trip.trip_total || trip.tripTotal) || 0;
-
-                            return (
-                              <tr key={trip.id} className="hover:bg-slate-50 transition-colors">
-                                <td className="px-5 py-4 font-bold text-slate-700">{trip.date}</td>
-                                <td className="px-5 py-4 font-mono text-slate-500">{trip.bill_no || trip.billNo}</td>
-                                <td className="px-5 py-4">
-                                  <div className="font-bold text-slate-800 flex items-center gap-1">
-                                    ➔ {trip.to_loc || trip.to}
-                                  </div>
-                                  <div className="text-xs text-slate-500 mt-0.5">
-                                    {trip.load_type || trip.loadType} ({trip.net_weight || trip.netWeight}T)
-                                  </div>
-                                </td>
-                                <td className="px-5 py-4 text-indigo-600 font-bold">
-                                  ₹ {advance.toLocaleString()}
-                                </td>
-                                <td className="px-5 py-4 text-red-600">
-                                  <div className="font-bold">₹ {totalTripExpenses.toLocaleString()}</div>
-                                  <div className="text-[10px] text-slate-400 mt-0.5 font-mono">
-                                    L:{loadChg} / U:{unloadChg} / W:{weightChg}
-                                  </div>
-                                </td>
-                                <td className="px-5 py-4 text-slate-600 font-medium">
-                                  ₹ {tripRent.toLocaleString()}
-                                </td>
-                                <td className="px-5 py-4 text-green-700 font-bold">
-                                  ₹ {drPay.toLocaleString()}
-                                </td>
-                                <td className="px-5 py-4 bg-blue-50 border-l border-blue-100 text-blue-700 font-extrabold text-right">
-                                  ₹ {finalPay.toLocaleString()}
-                                </td>
-                              </tr>
-                            );
-                          })
-                        ) : (
-                          <tr><td colSpan={12} className="p-6 text-center text-slate-400">No trips in this settlement.</td></tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-};
 interface InputProps { label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; placeholder?: string; type?: string; uppercase?: boolean; required?: boolean; error?: boolean; }
 const Input = ({ label, value, onChange, placeholder, type="text", uppercase, required, error }: InputProps) => (<div><label className={`text-xs font-bold uppercase mb-1 block ${error ? 'text-red-500' : 'text-slate-500'}`}>{label}</label><input type={type} required={required} placeholder={placeholder} value={value} onChange={onChange} className={`w-full border p-2.5 rounded-lg text-sm outline-none transition-all ${error ? 'border-red-500 bg-red-50' : 'border-slate-300 focus:ring-2 focus:ring-blue-500'} ${uppercase ? 'uppercase' : ''}`} /></div>);
 const ActionButton = ({ icon, label, color, onClick }: any) => <button onClick={onClick} className="flex flex-col items-center justify-center py-3 hover:bg-white active:bg-slate-100 transition-colors group"><div className={`${color} mb-1 transition-transform group-hover:scale-110`}>{icon}</div><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide group-hover:text-slate-700">{label}</span></button>;
