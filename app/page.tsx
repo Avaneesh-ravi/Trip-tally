@@ -344,11 +344,11 @@ export default function LMSApp() {
 
   // --- FETCH DATA FROM SUPABASE ---
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !currentUser) return;
 
     const fetchAllData = async () => {
-      // 1. Fetch Vehicles
-      const { data: vData } = await supabase.from('vehicles').select('*');
+      // 1. Fetch Vehicles (Filtered by user)
+      const { data: vData } = await supabase.from('vehicles').select('*').eq('user_id', currentUser.id);
       if (vData) {
         setVehicles(vData.map((v: any) => ({
           id: v.id,
@@ -367,8 +367,8 @@ export default function LMSApp() {
         })));
       }
 
-      // 2. Fetch Drivers
-      const { data: dData } = await supabase.from('drivers').select('*');
+      // 2. Fetch Drivers (Filtered by user)
+      const { data: dData } = await supabase.from('drivers').select('*').eq('user_id', currentUser.id);
       if (dData) {
         setDrivers(dData.map((d: any) => ({
           id: d.id,
@@ -380,10 +380,11 @@ export default function LMSApp() {
         })));
       }
 
-      // 3. Fetch Trips (Active/Completed)
+      // 3. Fetch Trips (Active/Completed) (Filtered by user)
       const { data: tData } = await supabase
         .from('trips')
         .select(`*, drivers(name)`)
+        .eq('user_id', currentUser.id)
         .order('date', { ascending: false });
 
       if (tData) {
@@ -416,10 +417,11 @@ export default function LMSApp() {
         })));
       }
 
-      // 4. Fetch Settlements (History Page)
+      // 4. Fetch Settlements (History Page) (Filtered by user)
       const { data: sData } = await supabase
         .from('settlements')
         .select('*, drivers(name)')
+        .eq('user_id', currentUser.id)
         .order('settlement_date', { ascending: false });
         
       if (sData) {
@@ -437,7 +439,7 @@ export default function LMSApp() {
     };
 
     fetchAllData();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, currentUser]);
 
   // --- NOTIFICATION LOGIC ---
   useEffect(() => {
@@ -526,7 +528,8 @@ export default function LMSApp() {
         setCurrentView, 
         handleFilterSelect, 
         filterReg, setFilterReg, 
-        handleDeleteTrip 
+        handleDeleteTrip,
+        currentUser // Pass user down for inserts
     };
 
     switch(currentView) {
@@ -605,7 +608,7 @@ export default function LMSApp() {
           {renderView()}
         </main>
 
-        {/* --- MOBILE "MORE" MENU POPUP --- */}
+{/* --- MOBILE "MORE" MENU POPUP --- */}
         {showMobileMenu && (
           <div className="md:hidden fixed bottom-20 right-4 bg-white rounded-xl shadow-2xl border border-slate-200 p-2 z-50 animate-in slide-in-from-bottom-5 flex flex-col gap-1 w-48">
              <button onClick={() => { setCurrentView("drivers"); setShowMobileMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 w-full text-left">
@@ -620,9 +623,14 @@ export default function LMSApp() {
              <button onClick={() => { setCurrentView("history"); setShowMobileMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 w-full text-left">
                 <History size={18} className="text-slate-600"/> History
              </button>
+             
+             {/* --- LOGOUT BUTTON ADDED HERE --- */}
+             <div className="h-px bg-slate-200 my-1"></div>
+             <button onClick={handleLogout} className="flex items-center gap-3 p-3 hover:bg-red-50 rounded-lg text-sm font-bold text-red-600 w-full text-left">
+                <LogOut size={18} className="text-red-500"/> Logout
+             </button>
           </div>
         )}
-
         {/* --- MOBILE BOTTOM BAR --- */}
         <div className="md:hidden fixed bottom-0 w-full bg-white border-t border-slate-200 flex justify-around p-3 z-20 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <MobileNavItem icon={<LayoutDashboard size={20}/>} label="Home" active={currentView === "dashboard"} onClick={() => { setCurrentView("dashboard"); setShowMobileMenu(false); }} />
@@ -641,7 +649,7 @@ export default function LMSApp() {
 
 // --- SUB-COMPONENTS (Views) ---
 
-const DashboardView = ({ vehicles, setVehicles, drivers, setDrivers, transactions, setTransactions, trips, setTrips, setCurrentView, handleFilterSelect, setHistoryLogs }: any) => {
+const DashboardView = ({ vehicles, setVehicles, drivers, setDrivers, transactions, setTransactions, trips, setTrips, setCurrentView, handleFilterSelect, setHistoryLogs, currentUser }: any) => {
   const [activeModal, setActiveModal] = useState<{ type: string; data: any; vehicleId?: number } | null>(null);
   const [selectedDriverForModal, setSelectedDriverForModal] = useState<Driver | null>(null);
   const [showDriverList, setShowDriverList] = useState(false);
@@ -695,6 +703,7 @@ const DashboardView = ({ vehicles, setVehicles, drivers, setDrivers, transaction
     const vehiclePayload = {
       reg_number: form.reg.toUpperCase(), 
       location: 'Depot',
+      user_id: currentUser.id, // ADDED USER ID
       details: { 
         ...form, 
         seatCapacity: Number(form.seatCapacity) || 0, 
@@ -879,6 +888,7 @@ const DashboardView = ({ vehicles, setVehicles, drivers, setDrivers, transaction
         bill_no: tripForm.billNo, 
         vehicle_reg: currentVehicle.regNumber, 
         driver_id: currentDriver.id,
+        user_id: currentUser.id, // ADDED USER ID
         
         contractor: tripForm.contractor || null, 
         load_type: tripForm.loadType || null, 
@@ -918,7 +928,8 @@ const DashboardView = ({ vehicles, setVehicles, drivers, setDrivers, transaction
       if (!insertError) {
         await supabase.from('transactions').insert([{
             date: tripForm.date, time: "12:00", vehicle_reg: currentVehicle.regNumber,
-            type: 'Expense', amount: finalPay, category: 'Driver Payout', description: `Trip Bill: ${tripForm.billNo}`
+            type: 'Expense', amount: finalPay, category: 'Driver Payout', description: `Trip Bill: ${tripForm.billNo}`,
+            user_id: currentUser.id // ADDED USER ID
         }]);
 
         const newTripRecord: TripRecord = {
@@ -958,7 +969,7 @@ const DashboardView = ({ vehicles, setVehicles, drivers, setDrivers, transaction
         </div>
       )}
 
-      {selectedDriverForModal && <DriverDetailsModal driver={selectedDriverForModal} setDrivers={setDrivers} setHistoryLogs={setHistoryLogs} onClose={() => setSelectedDriverForModal(null)} />}
+      {selectedDriverForModal && <DriverDetailsModal driver={selectedDriverForModal} setDrivers={setDrivers} setHistoryLogs={setHistoryLogs} onClose={() => setSelectedDriverForModal(null)} currentUser={currentUser} />}
       
       {activeModal?.type === 'trip' && (
         <ModalWrapper 
@@ -1509,7 +1520,7 @@ const TripsView = ({ trips, handleFilterSelect, handleDeleteTrip }: any) => {
   );
 };
 
-const DriversView = ({ drivers, setDrivers, trips, setTrips }: any) => {
+const DriversView = ({ drivers, setDrivers, trips, setTrips, currentUser }: any) => {
   const [isAdding, setIsAdding] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [newDriver, setNewDriver] = useState({ name: "", phone: "", license: "", walletBalance: 0 });
@@ -1517,7 +1528,8 @@ const DriversView = ({ drivers, setDrivers, trips, setTrips }: any) => {
   const handleAddDriver = async (e: React.FormEvent) => {
     e.preventDefault();
     const { data, error } = await supabase.from('drivers').insert([{ 
-        name: newDriver.name, phone: newDriver.phone, license: newDriver.license, wallet_balance: 0 
+        name: newDriver.name, phone: newDriver.phone, license: newDriver.license, wallet_balance: 0,
+        user_id: currentUser.id // ADDED USER ID
     }]).select().single();
 
     if (error) { 
@@ -1542,7 +1554,7 @@ const DriversView = ({ drivers, setDrivers, trips, setTrips }: any) => {
 
     const today = new Date().toISOString().split('T')[0];
     const { data: driverTrips } = await supabase.from('trips').select('*').eq('driver_id', driverId).eq('status', 'active');
-    const { error: settleError } = await supabase.from('settlements').insert([{ driver_id: driverId, settlement_date: today, amount_paid: balance, trips_snapshot: driverTrips }]);
+    const { error: settleError } = await supabase.from('settlements').insert([{ driver_id: driverId, settlement_date: today, amount_paid: balance, trips_snapshot: driverTrips, user_id: currentUser.id }]);
 
     if (settleError) { alert("Error creating settlement"); return; }
     
@@ -1593,7 +1605,7 @@ const DriversView = ({ drivers, setDrivers, trips, setTrips }: any) => {
           </table>
         </div>
       </div>
-      {selectedDriver && <DriverDetailsModal driver={selectedDriver} setDrivers={setDrivers} onClose={() => setSelectedDriver(null)} />}
+      {selectedDriver && <DriverDetailsModal driver={selectedDriver} setDrivers={setDrivers} onClose={() => setSelectedDriver(null)} currentUser={currentUser} />}
       {isAdding && (<ModalWrapper title="Register Driver" onClose={() => setIsAdding(false)}><form onSubmit={handleAddDriver} className="space-y-4"><Input label="Name" value={newDriver.name} onChange={(e) => setNewDriver({...newDriver, name: e.target.value})} required /><Input label="Phone" value={newDriver.phone} onChange={(e) => setNewDriver({...newDriver, phone: e.target.value})} required /><Input label="License" value={newDriver.license} onChange={(e) => setNewDriver({...newDriver, license: e.target.value})} uppercase required /><button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold">Save Driver to Database</button></form></ModalWrapper>)}
     </div>
   );
@@ -1975,7 +1987,7 @@ const DetailsModal = ({ data, onClose }: { data: Vehicle, onClose: () => void })
   );
 };
 
-const DriverDetailsModal = ({ driver, setDrivers, setHistoryLogs, onClose }: { driver: any, setDrivers: any, setHistoryLogs?: any, onClose: () => void }) => {
+const DriverDetailsModal = ({ driver, setDrivers, setHistoryLogs, onClose, currentUser }: { driver: any, setDrivers: any, setHistoryLogs?: any, onClose: () => void, currentUser: any }) => {
   const [driverHistory, setDriverHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -2097,7 +2109,8 @@ const DriverDetailsModal = ({ driver, setDrivers, setHistoryLogs, onClose }: { d
     try {
         const { data: newSettlement, error } = await supabase.from('settlements').insert([{ 
             driver_id: driver.id, settlement_date: today, amount_paid: paid, trips_snapshot: tripsToSettle, 
-            notes: `Total: ${totalDue}, Paid: ${paid}, Bal: ${newBalance}`
+            notes: `Total: ${totalDue}, Paid: ${paid}, Bal: ${newBalance}`,
+            user_id: currentUser.id // ADDED USER ID
         }]).select().single();
 
         if (error) throw error;
@@ -2189,36 +2202,34 @@ const DriverDetailsModal = ({ driver, setDrivers, setHistoryLogs, onClose }: { d
             </div>
 
             <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${submitting ? 'opacity-60 pointer-events-none select-none' : ''}`}>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                      <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px]">
-                          <tr>
-                              <th className="px-4 py-3 w-12 text-center"><button onClick={toggleSelectAll} className="hover:text-white transition-colors">{selectedTripIds.size > 0 && selectedTripIds.size === filteredHistory.length ? <CheckSquare size={16}/> : <Square size={16}/>}</button></th>
-                              <th className="px-4 py-3">Date</th><th className="px-4 py-3">Route</th><th className="px-4 py-3 text-right">Rent</th><th className="px-4 py-3 text-right text-orange-400">Advance</th><th className="px-4 py-3 text-right text-red-400">Expense</th><th className="px-4 py-3 text-right text-green-400">Dr Pay</th><th className="px-4 py-3 text-right text-white bg-slate-700">Net</th>
-                          </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-xs font-medium">
-                          {loading ? <tr><td colSpan={8} className="p-8 text-center text-slate-400">Loading...</td></tr> : 
-                           filteredHistory.length === 0 ? <tr><td colSpan={8} className="p-8 text-center text-slate-400">No active trips.</td></tr> :
-                           filteredHistory.map((h) => {
-                               const isSelected = selectedTripIds.has(h.id);
-                               const exp = Math.round((Number(h.loadingCharge)||0)+(Number(h.unloadingCharge)||0)+(Number(h.weighbridgeCharge)||0));
-                               return (
-                                   <tr key={h.id} onClick={() => !submitting && handleToggleRow(h.id)} className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-slate-50'}`}>
-                                       <td className="px-4 py-3 text-center"><div className={`flex justify-center ${isSelected ? 'text-indigo-600' : 'text-slate-300'}`}>{isSelected ? <CheckSquare size={16}/> : <Square size={16}/>}</div></td>
-                                       <td className="px-4 py-3 font-bold text-slate-700">{h.date}<br/><span className="text-slate-400 font-normal">{h.billNo}</span></td>
-                                       <td className="px-4 py-3">{h.from} ➔ {h.to}<br/><span className="text-slate-400">{h.loadType}</span></td>
-                                       <td className="px-4 py-3 text-right font-bold text-blue-600">₹{h.tripTotal}</td>
-                                       <td className="px-4 py-3 text-right text-orange-600">₹{h.advance}</td>
-                                       <td className="px-4 py-3 text-right text-red-600">₹{exp}</td>
-                                       <td className="px-4 py-3 text-right text-green-600">₹{h.driverTripPay}</td>
-                                       <td className={`px-4 py-3 text-right font-bold ${h.netAmount>=0?'text-blue-600':'text-red-600'}`}>₹{h.netAmount}</td>
-                                   </tr>
-                               );
-                           })}
-                      </tbody>
-                  </table>
-                </div>
+                <table className="w-full text-sm text-left">
+                    <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px]">
+                        <tr>
+                            <th className="px-4 py-3 w-12 text-center"><button onClick={toggleSelectAll} className="hover:text-white transition-colors">{selectedTripIds.size > 0 && selectedTripIds.size === filteredHistory.length ? <CheckSquare size={16}/> : <Square size={16}/>}</button></th>
+                            <th className="px-4 py-3">Date</th><th className="px-4 py-3">Route</th><th className="px-4 py-3 text-right">Rent</th><th className="px-4 py-3 text-right text-orange-400">Advance</th><th className="px-4 py-3 text-right text-red-400">Expense</th><th className="px-4 py-3 text-right text-green-400">Dr Pay</th><th className="px-4 py-3 text-right text-white bg-slate-700">Net</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs font-medium">
+                        {loading ? <tr><td colSpan={8} className="p-8 text-center text-slate-400">Loading...</td></tr> : 
+                         filteredHistory.length === 0 ? <tr><td colSpan={8} className="p-8 text-center text-slate-400">No active trips.</td></tr> :
+                         filteredHistory.map((h) => {
+                             const isSelected = selectedTripIds.has(h.id);
+                             const exp = Math.round((Number(h.loadingCharge)||0)+(Number(h.unloadingCharge)||0)+(Number(h.weighbridgeCharge)||0));
+                             return (
+                                 <tr key={h.id} onClick={() => !submitting && handleToggleRow(h.id)} className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-slate-50'}`}>
+                                     <td className="px-4 py-3 text-center"><div className={`flex justify-center ${isSelected ? 'text-indigo-600' : 'text-slate-300'}`}>{isSelected ? <CheckSquare size={16}/> : <Square size={16}/>}</div></td>
+                                     <td className="px-4 py-3 font-bold text-slate-700">{h.date}<br/><span className="text-slate-400 font-normal">{h.billNo}</span></td>
+                                     <td className="px-4 py-3">{h.from} ➔ {h.to}<br/><span className="text-slate-400">{h.loadType}</span></td>
+                                     <td className="px-4 py-3 text-right font-bold text-blue-600">₹{h.tripTotal}</td>
+                                     <td className="px-4 py-3 text-right text-orange-600">₹{h.advance}</td>
+                                     <td className="px-4 py-3 text-right text-red-600">₹{exp}</td>
+                                     <td className="px-4 py-3 text-right text-green-600">₹{h.driverTripPay}</td>
+                                     <td className={`px-4 py-3 text-right font-bold ${h.netAmount>=0?'text-blue-600':'text-red-600'}`}>₹{h.netAmount}</td>
+                                 </tr>
+                             );
+                         })}
+                    </tbody>
+                </table>
             </div>
         </div>
       </div>
