@@ -9,7 +9,7 @@ import {
   Palette, Building2, CalendarDays, FileCheck, UserCircle, Receipt, 
   Calculator, Briefcase, Weight, LogOut, Lock, UserPlus, Printer, 
   Droplet, Filter, Calendar, Trash2, CheckSquare, CreditCard, Download,
-  Package, Square, CheckCircle2, Menu // <--- Added Menu Icon
+  Package, Square, CheckCircle2, Menu 
 } from 'lucide-react';
 
 // --- 1. CONFIGURATION ---
@@ -22,7 +22,6 @@ const CONTRACTOR_LOADS: Record<string, string[]> = {
   "MP SAMY": ["Rape Seed"]
 };
 
-// (Your full destination list is here. I have kept it collapsed for brevity, but it works the same)
 const DESTINATION_RATES = [
   { name: "Null", rate: 0 },{ name: "KK Nagar", rate: 0 },{ name: "Thirumagal", rate: 0 },{ name: "SVM", rate: 0 },{ name: "SK Samy", rate: 0 },{ name: "RGS", rate: 295 },{ name: "Moolapalayam", rate: 90 },{ name: "Perundurai", rate: 295 },{ name: "Athani", rate: 430 }, { name: "Anthiyur", rate: 430 }, { name: "Ammapettai", rate: 445 },
   { name: "Arachalur", rate: 370 }, { name: "Alangiyam", rate: 600 }, { name: "Alukuli", rate: 460 },
@@ -628,7 +627,7 @@ export default function LMSApp() {
         <div className="md:hidden fixed bottom-0 w-full bg-white border-t border-slate-200 flex justify-around p-3 z-20 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <MobileNavItem icon={<LayoutDashboard size={20}/>} label="Home" active={currentView === "dashboard"} onClick={() => { setCurrentView("dashboard"); setShowMobileMenu(false); }} />
           <MobileNavItem icon={<List size={20}/>} label="Trips" active={currentView === "trips"} onClick={() => { setCurrentView("trips"); setShowMobileMenu(false); }} />
-          <MobileNavItem icon={<Wallet size={20}/>} label="Money" active={currentView === "finance"} onClick={() => { setCurrentView("finance"); setShowMobileMenu(false); }} />
+          <MobileNavItem icon={<Wallet size={20}/>} label="Finance" active={currentView === "finance"} onClick={() => { setCurrentView("finance"); setShowMobileMenu(false); }} />
           
           <button onClick={() => setShowMobileMenu(!showMobileMenu)} className={`flex flex-col items-center justify-center w-16 transition-colors ${showMobileMenu ? 'text-blue-600' : 'text-slate-400'}`}>
              <div className={`mb-1 ${showMobileMenu ? 'scale-110' : ''} transition-transform`}><Menu size={20}/></div>
@@ -640,10 +639,6 @@ export default function LMSApp() {
   );
 }
 
-// --- SUB-COMPONENTS & VIEWS (Keep all your existing components below here) ---
-// Note: Since I cannot see your sub-components (DashboardView, TripsView, etc.) in your latest paste,
-// PLEASE ENSURE YOU DO NOT DELETE THEM. Paste the code above *replacing* the Imports and LMSApp function, 
-// but keep the views like DashboardView, TripsView, etc. that were below it.
 // --- SUB-COMPONENTS (Views) ---
 
 const DashboardView = ({ vehicles, setVehicles, drivers, setDrivers, transactions, setTransactions, trips, setTrips, setCurrentView, handleFilterSelect, setHistoryLogs }: any) => {
@@ -1380,43 +1375,45 @@ const FuelView = ({ trips, filterReg, setFilterReg, setTrips }: any) => {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs">
-            <tr>
-              <th className="px-6 py-4">Date</th>
-              <th className="px-6 py-4">Vehicle</th>
-              <th className="px-6 py-4">Route</th>
-              <th className="px-6 py-4 text-right">Km</th>
-              <th className="px-6 py-4 text-right">Liters</th>
-              <th className="px-6 py-4 text-right">Price</th>
-              <th className="px-6 py-4">Paid On</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {sortedTrips.length === 0 ? (
-              <tr><td colSpan={7} className="p-6 text-center text-slate-400">No fuel records found.</td></tr>
-            ) : (
-              sortedTrips.map((trip: any) => (
-                <tr key={trip.id} className="hover:bg-slate-50">
-                  <td className="px-6 py-4 font-bold text-slate-700">{trip.date}</td>
-                  <td className="px-6 py-4 font-bold text-blue-600">{trip.regNumber}</td>
-                  <td className="px-6 py-4 text-slate-500">{trip.from} ➔ {trip.to}</td>
-                  <td className="px-6 py-4 text-right font-mono text-slate-600">{trip.kilometers || '-'}</td>
-                  <td className="px-6 py-4 text-right font-mono">{trip.dieselLiters || '-'} L</td>
-                  <td className="px-6 py-4 text-right font-bold text-orange-600">₹ {Number(trip.dieselPrice).toLocaleString()}</td>
-                  <td className="px-6 py-4">
-                    <input 
-                      type="date" 
-                      className={`border p-1 rounded text-xs outline-none ${trip.fuelPaidDate ? 'bg-green-50 border-green-200 text-green-700 font-bold' : 'bg-red-50 border-red-200 text-red-700 font-bold'}`}
-                      defaultValue={trip.fuelPaidDate}
-                      onBlur={(e) => handleUpdateFuelDate(trip.id, e.target.value)}
-                    />
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs">
+              <tr>
+                <th className="px-6 py-4">Date</th>
+                <th className="px-6 py-4">Vehicle</th>
+                <th className="px-6 py-4">Route</th>
+                <th className="px-6 py-4 text-right">Km</th>
+                <th className="px-6 py-4 text-right">Liters</th>
+                <th className="px-6 py-4 text-right">Price</th>
+                <th className="px-6 py-4">Paid On</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {sortedTrips.length === 0 ? (
+                <tr><td colSpan={7} className="p-6 text-center text-slate-400">No fuel records found.</td></tr>
+              ) : (
+                sortedTrips.map((trip: any) => (
+                  <tr key={trip.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 font-bold text-slate-700">{trip.date}</td>
+                    <td className="px-6 py-4 font-bold text-blue-600">{trip.regNumber}</td>
+                    <td className="px-6 py-4 text-slate-500">{trip.from} ➔ {trip.to}</td>
+                    <td className="px-6 py-4 text-right font-mono text-slate-600">{trip.kilometers || '-'}</td>
+                    <td className="px-6 py-4 text-right font-mono">{trip.dieselLiters || '-'} L</td>
+                    <td className="px-6 py-4 text-right font-bold text-orange-600">₹ {Number(trip.dieselPrice).toLocaleString()}</td>
+                    <td className="px-6 py-4">
+                      <input 
+                        type="date" 
+                        className={`border p-1 rounded text-xs outline-none ${trip.fuelPaidDate ? 'bg-green-50 border-green-200 text-green-700 font-bold' : 'bg-red-50 border-red-200 text-red-700 font-bold'}`}
+                        defaultValue={trip.fuelPaidDate}
+                        onBlur={(e) => handleUpdateFuelDate(trip.id, e.target.value)}
+                      />
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -1561,38 +1558,40 @@ const DriversView = ({ drivers, setDrivers, trips, setTrips }: any) => {
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex justify-between items-center"><h2 className="text-lg font-bold">Driver Wallet & Directory</h2><button onClick={() => setIsAdding(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-md"><Plus size={16}/> Add Driver</button></div>
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs">
-            <tr>
-              <th className="px-6 py-4">Driver Name</th>
-              <th className="px-6 py-4">Phone Number</th>
-              <th className="px-6 py-4">License ID</th>
-              <th className="px-6 py-4 text-right">Net Added Amount</th>
-              <th className="px-6 py-4 text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {drivers.map((driver: Driver) => {
-              const netAdded = -driver.walletBalance; 
-              return (
-                <tr key={driver.id} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setSelectedDriver(driver)}>
-                  <td className="px-6 py-4"><div className="font-bold text-slate-800">{driver.name}</div></td>
-                  <td className="px-6 py-4 text-slate-600">{driver.phone}</td>
-                  <td className="px-6 py-4 text-slate-600 font-mono uppercase">{driver.license}</td>
-                  <td className="px-6 py-4 text-right">
-                    <span className={`py-1 px-3 rounded-full font-bold text-xs ${netAdded >= 0 ? 'bg-blue-50 text-blue-700' : 'bg-green-100 text-green-700'}`}>
-                      ₹ {netAdded.toLocaleString()}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 flex justify-center items-center gap-4">
-                    {driver.walletBalance > 0 && (<button onClick={(e) => handleSettleDriver(driver.id, driver.name, driver.walletBalance, e)} className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-md text-xs font-bold transition-all shadow-sm z-10"><RefreshCw size={12} /> Settle</button>)}
-                    <ChevronRight size={16} className="text-slate-400" />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs">
+              <tr>
+                <th className="px-6 py-4">Driver Name</th>
+                <th className="px-6 py-4">Phone Number</th>
+                <th className="px-6 py-4">License ID</th>
+                <th className="px-6 py-4 text-right">Net Added Amount</th>
+                <th className="px-6 py-4 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {drivers.map((driver: Driver) => {
+                const netAdded = -driver.walletBalance; 
+                return (
+                  <tr key={driver.id} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setSelectedDriver(driver)}>
+                    <td className="px-6 py-4"><div className="font-bold text-slate-800">{driver.name}</div></td>
+                    <td className="px-6 py-4 text-slate-600">{driver.phone}</td>
+                    <td className="px-6 py-4 text-slate-600 font-mono uppercase">{driver.license}</td>
+                    <td className="px-6 py-4 text-right">
+                      <span className={`py-1 px-3 rounded-full font-bold text-xs ${netAdded >= 0 ? 'bg-blue-50 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                        ₹ {netAdded.toLocaleString()}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 flex justify-center items-center gap-4">
+                      {driver.walletBalance > 0 && (<button onClick={(e) => handleSettleDriver(driver.id, driver.name, driver.walletBalance, e)} className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-md text-xs font-bold transition-all shadow-sm z-10"><RefreshCw size={12} /> Settle</button>)}
+                      <ChevronRight size={16} className="text-slate-400" />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
       {selectedDriver && <DriverDetailsModal driver={selectedDriver} setDrivers={setDrivers} onClose={() => setSelectedDriver(null)} />}
       {isAdding && (<ModalWrapper title="Register Driver" onClose={() => setIsAdding(false)}><form onSubmit={handleAddDriver} className="space-y-4"><Input label="Name" value={newDriver.name} onChange={(e) => setNewDriver({...newDriver, name: e.target.value})} required /><Input label="Phone" value={newDriver.phone} onChange={(e) => setNewDriver({...newDriver, phone: e.target.value})} required /><Input label="License" value={newDriver.license} onChange={(e) => setNewDriver({...newDriver, license: e.target.value})} uppercase required /><button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold">Save Driver to Database</button></form></ModalWrapper>)}
@@ -2190,34 +2189,36 @@ const DriverDetailsModal = ({ driver, setDrivers, setHistoryLogs, onClose }: { d
             </div>
 
             <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${submitting ? 'opacity-60 pointer-events-none select-none' : ''}`}>
-                <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px]">
-                        <tr>
-                            <th className="px-4 py-3 w-12 text-center"><button onClick={toggleSelectAll} className="hover:text-white transition-colors">{selectedTripIds.size > 0 && selectedTripIds.size === filteredHistory.length ? <CheckSquare size={16}/> : <Square size={16}/>}</button></th>
-                            <th className="px-4 py-3">Date</th><th className="px-4 py-3">Route</th><th className="px-4 py-3 text-right">Rent</th><th className="px-4 py-3 text-right text-orange-400">Advance</th><th className="px-4 py-3 text-right text-red-400">Expense</th><th className="px-4 py-3 text-right text-green-400">Dr Pay</th><th className="px-4 py-3 text-right text-white bg-slate-700">Net</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-xs font-medium">
-                        {loading ? <tr><td colSpan={8} className="p-8 text-center text-slate-400">Loading...</td></tr> : 
-                         filteredHistory.length === 0 ? <tr><td colSpan={8} className="p-8 text-center text-slate-400">No active trips.</td></tr> :
-                         filteredHistory.map((h) => {
-                             const isSelected = selectedTripIds.has(h.id);
-                             const exp = Math.round((Number(h.loadingCharge)||0)+(Number(h.unloadingCharge)||0)+(Number(h.weighbridgeCharge)||0));
-                             return (
-                                 <tr key={h.id} onClick={() => !submitting && handleToggleRow(h.id)} className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-slate-50'}`}>
-                                     <td className="px-4 py-3 text-center"><div className={`flex justify-center ${isSelected ? 'text-indigo-600' : 'text-slate-300'}`}>{isSelected ? <CheckSquare size={16}/> : <Square size={16}/>}</div></td>
-                                     <td className="px-4 py-3 font-bold text-slate-700">{h.date}<br/><span className="text-slate-400 font-normal">{h.billNo}</span></td>
-                                     <td className="px-4 py-3">{h.from} ➔ {h.to}<br/><span className="text-slate-400">{h.loadType}</span></td>
-                                     <td className="px-4 py-3 text-right font-bold text-blue-600">₹{h.tripTotal}</td>
-                                     <td className="px-4 py-3 text-right text-orange-600">₹{h.advance}</td>
-                                     <td className="px-4 py-3 text-right text-red-600">₹{exp}</td>
-                                     <td className="px-4 py-3 text-right text-green-600">₹{h.driverTripPay}</td>
-                                     <td className={`px-4 py-3 text-right font-bold ${h.netAmount>=0?'text-blue-600':'text-red-600'}`}>₹{h.netAmount}</td>
-                                 </tr>
-                             );
-                         })}
-                    </tbody>
-                </table>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                      <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px]">
+                          <tr>
+                              <th className="px-4 py-3 w-12 text-center"><button onClick={toggleSelectAll} className="hover:text-white transition-colors">{selectedTripIds.size > 0 && selectedTripIds.size === filteredHistory.length ? <CheckSquare size={16}/> : <Square size={16}/>}</button></th>
+                              <th className="px-4 py-3">Date</th><th className="px-4 py-3">Route</th><th className="px-4 py-3 text-right">Rent</th><th className="px-4 py-3 text-right text-orange-400">Advance</th><th className="px-4 py-3 text-right text-red-400">Expense</th><th className="px-4 py-3 text-right text-green-400">Dr Pay</th><th className="px-4 py-3 text-right text-white bg-slate-700">Net</th>
+                          </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-xs font-medium">
+                          {loading ? <tr><td colSpan={8} className="p-8 text-center text-slate-400">Loading...</td></tr> : 
+                           filteredHistory.length === 0 ? <tr><td colSpan={8} className="p-8 text-center text-slate-400">No active trips.</td></tr> :
+                           filteredHistory.map((h) => {
+                               const isSelected = selectedTripIds.has(h.id);
+                               const exp = Math.round((Number(h.loadingCharge)||0)+(Number(h.unloadingCharge)||0)+(Number(h.weighbridgeCharge)||0));
+                               return (
+                                   <tr key={h.id} onClick={() => !submitting && handleToggleRow(h.id)} className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-slate-50'}`}>
+                                       <td className="px-4 py-3 text-center"><div className={`flex justify-center ${isSelected ? 'text-indigo-600' : 'text-slate-300'}`}>{isSelected ? <CheckSquare size={16}/> : <Square size={16}/>}</div></td>
+                                       <td className="px-4 py-3 font-bold text-slate-700">{h.date}<br/><span className="text-slate-400 font-normal">{h.billNo}</span></td>
+                                       <td className="px-4 py-3">{h.from} ➔ {h.to}<br/><span className="text-slate-400">{h.loadType}</span></td>
+                                       <td className="px-4 py-3 text-right font-bold text-blue-600">₹{h.tripTotal}</td>
+                                       <td className="px-4 py-3 text-right text-orange-600">₹{h.advance}</td>
+                                       <td className="px-4 py-3 text-right text-red-600">₹{exp}</td>
+                                       <td className="px-4 py-3 text-right text-green-600">₹{h.driverTripPay}</td>
+                                       <td className={`px-4 py-3 text-right font-bold ${h.netAmount>=0?'text-blue-600':'text-red-600'}`}>₹{h.netAmount}</td>
+                                   </tr>
+                               );
+                           })}
+                      </tbody>
+                  </table>
+                </div>
             </div>
         </div>
       </div>
