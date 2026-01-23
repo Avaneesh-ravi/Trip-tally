@@ -2582,94 +2582,81 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
 </div>
 
  {/* --- UPDATED TABLE IN DRIVER DETAILS MODAL --- */}
+{/* --- UPDATED TABLE IN DRIVER DETAILS MODAL --- */}
 <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${submitting ? 'opacity-60 pointer-events-none select-none' : ''}`}>
     <div className="overflow-x-auto">
         <table className="w-full text-sm text-left">
             <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px]">
                 <tr>
-                    <th className="px-4 py-3 w-12 text-center"></th>
+                    {/* REMOVED: <th className="px-4 py-3 w-12 text-center no-print"></th> */}
                     <th className="px-4 py-3">Date</th>
                     <th className="px-4 py-3">Route / Load</th>
                     <th className="px-4 py-3 text-right text-orange-400">Advance</th>
-                    
-                    {/* MERGED EXPENSES HEADER */}
-                    <th className="px-4 py-3 text-center text-red-400 bg-red-900/30">
-                        L / U / W / Extra
-                    </th>
+                    <th className="px-4 py-3 text-center text-red-400 bg-red-900/30">L / U / W / Extra</th>
                     <th className="px-4 py-3 text-right text-green-400">Dr Pay</th>
                     <th className="px-4 py-3 text-right text-red-400 bg-red-900/50">Total Exp</th>
-                    
                     <th className="px-4 py-3 text-right text-white bg-slate-700">Net Added</th>
                 </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-[11px] font-medium">
-    {loading ? (
-        <tr><td colSpan={8} className="p-8 text-center text-slate-400">Loading History...</td></tr>
-    ) : filteredHistory.length === 0 ? (
-        <tr><td colSpan={8} className="p-8 text-center text-slate-400">No active trips found.</td></tr>
-    ) : filteredHistory.map((h, index) => {
-        const isSelected = selectedTripIds.has(h.id);
-        
-        // Applying your formula: (Advance + Total Expenses) - Gross Pay
-        const netAddedValue = ( h.driverTripPay-(h.advance - h.totalExpenses) );
+                {loading ? (
+                    <tr><td colSpan={7} className="p-8 text-center text-slate-400">Loading History...</td></tr>
+                ) : filteredHistory.length === 0 ? (
+                    <tr><td colSpan={7} className="p-8 text-center text-slate-400">No active trips found.</td></tr>
+                ) : filteredHistory.map((h, index) => {
+                    const isSelected = selectedTripIds.has(h.id);
+                    const netAddedValue = (h.driverTripPay - (h.advance - h.totalExpenses));
 
-        return (
-    <tr 
-        key={`${h.id}-${index}`} 
-        onClick={() => !submitting && handleToggleRow(h.id)} 
-        className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-slate-50'}`}
-    >
-        {/* ... existing <td> elements ... */}
+                    return (
+                        <tr 
+                            key={`${h.id}-${index}`} 
+                            onClick={() => !submitting && handleToggleRow(h.id)} 
+                            className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-slate-50'}`}
+                        >
+                            {/* REMOVED: <td className="px-4 py-3 w-12 text-center no-print">...</td> */}
+                            
+                            {/* 1. Date & Bill Number */}
+                            <td className="px-4 py-3 font-bold text-slate-700">
+                                {h.date}<br/>
+                                <span className="text-slate-400 font-normal">{h.billNo}</span>
+                            </td>
 
-        {/* Updated Net Added Column */}
-        <td className={`px-4 py-3 text-right font-bold border-l border-slate-100 ${isSelected ? 'text-indigo-700' : 'text-slate-800'}`}>
-            ₹{(h.driverTripPay - (h.advance - h.totalExpenses)).toLocaleString()}
-        </td>
+                            {/* 2. Route & Load */}
+                            <td className="px-4 py-3">
+                                <div className="font-bold">{h.from} ➔ {h.to}</div>
+                                <div className="text-slate-400">{h.loadType} ({h.netWeight}T)</div>
+                            </td>
 
-                {/* Date & Bill Number */}
-                <td className="px-4 py-3 font-bold text-slate-700">
-                    {h.date}<br/>
-                    <span className="text-slate-400 font-normal">{h.billNo}</span>
-                </td>
+                            {/* 3. Advance */}
+                            <td className="px-4 py-3 text-right text-orange-600 font-bold">
+                                ₹{h.advance.toLocaleString()}
+                            </td>
 
-                {/* Route & Load */}
-                <td className="px-4 py-3">
-                    <div className="font-bold">{h.from} ➔ {h.to}</div>
-                    <div className="text-slate-400">{h.loadType} ({h.netWeight}T)</div>
-                </td>
+                            {/* 4. L / U / W / Extra */}
+                            <td className="px-4 py-3 text-center text-slate-600 bg-slate-50/50 font-mono">
+                                {h.loadingCharge} / {h.unloadingCharge} / {h.weighbridgeCharge} / <span className="text-red-500 font-bold">{h.extraExpense}</span>
+                            </td>
 
-                {/* Advance */}
-                <td className="px-4 py-3 text-right text-orange-600 font-bold">
-                    ₹{h.advance.toLocaleString()}
-                </td>
+                            {/* 5. Dr Pay */}
+                            <td className="px-4 py-3 text-right text-green-600 font-bold">
+                                ₹{h.driverTripPay.toLocaleString()}
+                            </td>
 
-                {/* Merged Expenses: Loading / Unloading / Weight / Extra */}
-                <td className="px-4 py-3 text-center text-slate-600 bg-slate-50/50 font-mono">
-                    {h.loadingCharge} / {h.unloadingCharge} / {h.weighbridgeCharge} / <span className="text-red-500 font-bold">{h.extraExpense}</span>
-                </td>
+                            {/* 6. Total Exp */}
+                            <td className="px-4 py-3 text-right text-red-600 font-bold bg-red-50/50">
+                                ₹{h.totalExpenses.toLocaleString()}
+                            </td>
 
-
-  {/* Gross Pay (Driver Pay) */}
-                <td className="px-4 py-3 text-right text-green-600 font-bold">
-                    ₹{h.driverTripPay.toLocaleString()}
-                </td>
-                {/* Total Trip Expenses */}
-                <td className="px-4 py-3 text-right text-red-600 font-bold bg-red-50/50">
-                    ₹{h.totalExpenses.toLocaleString()}
-                </td>
-
-              
-
-                {/* Net Added Column (Using your Formula) */}
-                <td className={`px-4 py-3 text-right font-bold border-l border-slate-100 ${
-                netAddedValue >= 0 ? 'text-emerald-600 bg-emerald-50/10' : 'text-red-600 bg-red-50/10'
-            }`}>
-                ₹{netAddedValue.toLocaleString()}
-            </td>
-        </tr>
-    );
-})}
-</tbody>
+                            {/* 7. Net Added */}
+                            <td className={`px-4 py-3 text-right font-bold border-l border-slate-100 ${
+                                netAddedValue >= 0 ? 'text-emerald-600 bg-emerald-50/10' : 'text-red-600 bg-red-50/10'
+                            }`}>
+                                ₹{netAddedValue.toLocaleString()}
+                            </td>
+                        </tr>
+                    );
+                })}
+            </tbody>
         </table>
     </div>
 </div>
