@@ -19,7 +19,9 @@ const CONTRACTOR_LOADS: Record<string, string[]> = {
   "KSP": ["Maize", "Rape Seed", "Soya", "Fertilizer"],
   "TKS": ["Fertilizer"],
   "SBT": ["Rice", "Wheat", "Fertilizer"],
-  "MP SAMY": ["Rape Seed"]
+  "MP SAMY": ["Rape Seed"],
+  "SS":["Maize"],
+  "KGS":["Sugar"]
 };
 
 const DESTINATION_RATES = [
@@ -843,17 +845,17 @@ const handleDestinationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     let unloading = "0";
     let weighbridge = tripForm.weighbridgeCharge;
 
-    // RGS logic for Unloading Charge
+    // --- RGS LOGIC FOR UNLOADING CHARGE ---
     if (value === "RGS") {
       const weight = Number(tripForm.netWeight) || 0;
-      unloading = ((45 * weight) + 30).toString();
+      // Formula: (45 * weight) + 30
+      unloading = weight > 0 ? Math.round((45 * weight) + 30).toString() : "0";
       
-      // If destination is RGS but load is Maize, weighbridge MUST be 0
-      // Otherwise, it defaults to 130 for RGS
+      // Maize rule: if load is Maize, weighbridge is 0, else 130
       weighbridge = tripForm.loadType === "Maize" ? "0" : "130";
     } else {
-      // For other destinations, follow the Maize rule
       weighbridge = tripForm.loadType === "Maize" ? "0" : "130";
+      unloading = "0"; 
     }
 
     setTripForm({ 
@@ -870,26 +872,28 @@ const handleDestinationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
 const handleInputChange = (field: string, value: string) => {
   let updatedForm = { ...tripForm, [field]: value };
 
-  // ... (keep Maize and RGS logic)
+  // --- AUTO-CALCULATE RGS UNLOADING WHEN WEIGHT CHANGES ---
+  if (field === 'netWeight' && updatedForm.to === 'RGS') {
+    const weight = Number(value) || 0;
+    updatedForm.unloadingCharge = Math.round((45 * weight) + 30).toString();
+  }
 
-  // 3. SPECIAL RESET LOGIC
+  // --- REST OF YOUR EXISTING LOGIC ---
   if (field === 'billNo') {
     if (value === '0') {
       updatedForm = {
         ...updatedForm,
         contractor: '', loadType: '', to: '', netWeight: '', expense: '0',
         rate: 0, tripTotal: 0, 
-        loadingCharge: '0', // Set to 0 strictly for Bill 0
+        loadingCharge: '0',
         unloadingCharge: '0',
         weighbridgeCharge: '0', 
         dieselPrice: '0', dieselLiters: '0',
         driverTripPay: 0, advance: '0'
       };
     } else if (value !== '' && tripForm.billNo === '0') {
-      // If moving away from Bill 0 to a real number, restore default 500
       updatedForm.loadingCharge = '500';
       updatedForm.weighbridgeCharge = '130';
-
     }
   }
 
@@ -1536,30 +1540,29 @@ const TripsView = ({ trips, handleFilterSelect, handleDeleteTrip }: any) => {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
         <table className="w-full text-sm text-left">
           <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs whitespace-nowrap">
-            <tr>
-              <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3">Bill No</th>
-              <th className="px-4 py-3 border-l border-r border-slate-200 bg-slate-100">Vehicle</th>
-              <th className="px-4 py-3">Driver</th>
-              <th className="px-4 py-3">Route</th>
-              <th className="px-4 py-3">Contractor</th>
-              <th className="px-4 py-3">Load</th>
-              <th className="px-4 py-3">Net Wt</th>
-              <th className="px-4 py-3">Rate</th>
-              <th className="px-4 py-3 font-extrabold text-blue-700 bg-blue-50">Total Rent</th>
-              <th className="px-4 py-3 text-blue-600">Advance</th>
-              {/* 1. MOVED EXPENSE HEADER HERE */}
-              <th className="px-4 py-3 bg-indigo-50/30 font-mono">Expense</th>
-              <th className="px-4 py-3">Load/Unload</th>
-              <th className="px-4 py-3 bg-orange-50 text-orange-700">Diesel Liter</th>
-              <th className="px-4 py-3 bg-orange-50 text-orange-700">Fuel Price</th>
-              <th className="px-4 py-3">Weighbridge</th>
-              <th className="px-4 py-3">Dr. Pay</th>
-              <th className="px-4 py-3 font-extrabold text-red-700 bg-red-50">Total Expense</th>
-              <th className="px-4 py-3 font-extrabold text-slate-700 bg-slate-50 text-right">Profit</th>
-              <th className="px-4 py-3 text-center">Action</th>
-            </tr>
-          </thead>
+  <tr>
+    <th className="px-4 py-3">Date</th>
+    <th className="px-4 py-3">Bill No</th>
+    <th className="px-4 py-3 border-l border-r border-slate-200 bg-slate-100">Vehicle</th>
+    <th className="px-4 py-3">Driver</th>
+    <th className="px-4 py-3">Route</th>
+    <th className="px-4 py-3">Contractor</th>
+    <th className="px-4 py-3">Load</th>
+    <th className="px-4 py-3">Net Wt</th>
+    <th className="px-4 py-3">Rate</th>
+    <th className="px-4 py-3 font-extrabold text-blue-700 bg-blue-50">Total Rent</th>
+    <th className="px-4 py-3 text-blue-600">Advance</th>
+    <th className="px-4 py-3 bg-indigo-50/30 font-mono">Expense</th>
+    <th className="px-4 py-3">Load/Unload</th>
+    <th className="px-4 py-3 bg-orange-50 text-orange-700">Diesel Liter</th>
+    <th className="px-4 py-3 bg-orange-50 text-orange-700">Fuel Price</th>
+    <th className="px-4 py-3">Weighbridge</th>
+    <th className="px-4 py-3">Dr. Pay</th>
+    <th className="px-4 py-3 font-extrabold text-red-700 bg-red-50">Total Expense</th>
+    <th className="px-4 py-3 font-extrabold text-slate-700 bg-slate-50 text-right">Profit</th>
+    <th className="px-4 py-3 text-center">Action</th>
+  </tr>
+</thead>
           <tbody className="divide-y divide-slate-100 whitespace-nowrap">
   {filteredTrips.length === 0 ? (
     <tr><td colSpan={20} className="p-6 text-center text-slate-400">No trips recorded for this period.</td></tr>
@@ -1574,6 +1577,7 @@ const TripsView = ({ trips, handleFilterSelect, handleDeleteTrip }: any) => {
         Number(trip.expense || 0);
 
       const profit = (Number(trip.tripTotal) || 0) - totalExpense;
+      
       return (
         <tr key={`${trip.id}-${index}`} className="hover:bg-slate-50">
           <td className="px-4 py-3">{trip.date}</td>
@@ -1587,8 +1591,7 @@ const TripsView = ({ trips, handleFilterSelect, handleDeleteTrip }: any) => {
           <td className="px-4 py-3">₹{trip.rate}</td>
           <td className="px-4 py-3 font-bold text-blue-700 bg-blue-50/50">₹{(trip.tripTotal || 0).toLocaleString()}</td>
           <td className="px-4 py-3 text-blue-600 font-medium">₹{trip.advance}</td>
-          {/* MOVED EXPENSE HERE */}
-          <td className="px-4 py-3 bg-indigo-50/30 font-mono">₹ {Number(trip.expense || 0).toLocaleString()}</td>
+          <td className="px-4 py-3 bg-indigo-50/30 font-mono">₹{Number(trip.expense || 0).toLocaleString()}</td>
           <td className="px-4 py-3 text-red-500">{trip.loadingCharge} / {trip.unloadingCharge}</td>
           <td className="px-4 py-3 bg-orange-50/30">{trip.dieselLiters} L</td>
           <td className="px-4 py-3 bg-orange-50/30">₹{trip.dieselPrice}</td>
@@ -1597,7 +1600,9 @@ const TripsView = ({ trips, handleFilterSelect, handleDeleteTrip }: any) => {
           <td className="px-4 py-3 font-bold text-red-700 bg-red-50/50">₹{totalExpense.toLocaleString()}</td>
           <td className={`px-4 py-3 font-bold bg-slate-50/50 text-right ${profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>₹{profit.toLocaleString()}</td>
           <td className="px-4 py-3 text-center">
-            <button onClick={() => handleDeleteTrip(trip.id)} className="p-2 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors" title="Delete Trip"><Trash2 size={16} /></button>
+            <button onClick={() => handleDeleteTrip(trip.id)} className="p-2 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors" title="Delete Trip">
+              <Trash2 size={16} />
+            </button>
           </td>
         </tr>
       );
@@ -1817,9 +1822,12 @@ const totalExpenses = Math.round(
             <div className="overflow-x-auto">
             <table className="w-full text-sm text-left border-collapse">
               <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px] whitespace-nowrap">
-                <tr>
-                  <th className="px-4 py-3 w-12 text-center no-print"></th> {/* Hidden on print */}
-                  <th className="px-3 py-3 border-r border-slate-700">Date</th>
+                {/* Move the comment inside the <th> or remove it */}
+<tr>
+  <th className="px-4 py-3 w-12 text-center no-print">
+    {/* Hidden on print */}
+  </th>
+  <th className="px-3 py-3 border-r border-slate-700">Date</th>
                   <th className="px-3 py-3 border-r border-slate-700">Bill No</th>
                   <th className="px-3 py-3 border-r border-slate-700">Vehicle</th>
                   <th className="px-3 py-3 border-r border-slate-700">Driver</th>
@@ -1848,7 +1856,9 @@ const totalExpenses = Math.round(
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-medium whitespace-nowrap">
   {filteredTrips.length === 0 ? (
-    <tr><td colSpan={20} className="p-8 text-center text-slate-400">No records found for this period.</td></tr>
+    <tr>
+      <td colSpan={22} className="p-8 text-center text-slate-400">No records found for this period.</td>
+    </tr>
   ) : (
     filteredTrips.map((trip: TripRecord, index: number) => {
       const drPay = Math.round(Number(trip.driverTripPay) || 0);
@@ -1866,6 +1876,7 @@ const totalExpenses = Math.round(
 
       return (
         <tr key={`${trip.id}-${index}`} className="hover:bg-blue-50 transition-colors">
+          <td className="px-4 py-2 no-print"></td>
           <td className="px-3 py-2 border-r border-slate-50">{trip.date}</td>
           <td className="px-3 py-2 border-r border-slate-50 font-mono text-slate-500">{trip.billNo}</td>
           <td className="px-3 py-2 border-r border-slate-50 font-bold text-slate-700">{trip.regNumber}</td>
@@ -1874,31 +1885,22 @@ const totalExpenses = Math.round(
           <td className="px-3 py-2 border-r border-slate-50">{trip.contractor}</td>
           <td className="px-3 py-2 border-r border-slate-50">{trip.loadType}</td>
           <td className="px-3 py-2 border-r border-slate-50 font-bold">{trip.netWeight}</td>
-
           <td className="px-3 py-2 border-r border-slate-50">₹{trip.rate}</td>
           <td className="px-3 py-2 border-r border-slate-50 font-bold text-blue-700 bg-blue-50/50">₹{tripTotal.toLocaleString()}</td>
           <td className="px-3 py-2 border-r border-slate-50 text-right text-orange-600 font-semibold">₹{trip.advance}</td>
           <td className="px-3 py-2 border-r border-slate-50 text-right text-slate-600">₹{trip.weighbridgeCharge}</td>
-
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-600 font-bold">
-            ₹{Number(trip.expense || 0).toLocaleString()}
-          </td>
-
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-500 font-bold">
-            ₹{Number(trip.loadingCharge || 0).toLocaleString()}
-          </td>
-
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-500 font-bold">
-            ₹{Number(trip.unloadingCharge || 0).toLocaleString()}
-          </td>
-
+          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-600 font-bold">₹{Number(trip.expense || 0).toLocaleString()}</td>
+          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-500 font-bold">₹{Number(trip.loadingCharge || 0).toLocaleString()}</td>
+          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-500 font-bold">₹{Number(trip.unloadingCharge || 0).toLocaleString()}</td>
           <td className="px-3 py-2 border-r border-slate-50 text-right text-green-600 font-bold bg-green-50/30">₹{drPay.toLocaleString()}</td>
           <td className="px-3 py-2 border-r border-slate-50 text-right text-slate-600">{trip.dieselLiters} L</td>
           <td className="px-3 py-2 border-r border-slate-50 text-right text-orange-600">₹{trip.dieselPrice}</td>
           <td className="px-3 py-2 border-r border-slate-50 text-right text-red-600 font-bold bg-red-50/30">₹{tripExpense.toLocaleString()}</td>
           <td className={`px-3 py-2 text-right font-extrabold ${tripProfit >= 0 ? 'text-emerald-600 bg-emerald-50/50' : 'text-red-600 bg-red-50/50'}`}>₹{tripProfit.toLocaleString()}</td>
           <td className="px-2 py-3 text-center no-print">
-            <button onClick={() => handleDeleteTrip(trip.id)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-all"><Trash2 size={14}/></button>
+            <button onClick={() => handleDeleteTrip(trip.id)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-all">
+              <Trash2 size={14}/>
+            </button>
           </td>
         </tr>
       );
@@ -2586,18 +2588,32 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
 <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${submitting ? 'opacity-60 pointer-events-none select-none' : ''}`}>
     <div className="overflow-x-auto">
         <table className="w-full text-sm text-left">
-            <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px]">
-                <tr>
-                    {/* REMOVED: <th className="px-4 py-3 w-12 text-center no-print"></th> */}
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Route / Load</th>
-                    <th className="px-4 py-3 text-right text-orange-400">Advance</th>
-                    <th className="px-4 py-3 text-center text-red-400 bg-red-900/30">L / U / W / Extra</th>
-                    <th className="px-4 py-3 text-right text-green-400">Dr Pay</th>
-                    <th className="px-4 py-3 text-right text-red-400 bg-red-900/50">Total Exp</th>
-                    <th className="px-4 py-3 text-right text-white bg-slate-700">Net Added</th>
-                </tr>
-            </thead>
+            <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px] whitespace-nowrap">
+  <tr>
+    <th className="px-4 py-3 w-12 text-center no-print">{/* Hidden on print */}</th>
+    <th className="px-3 py-3 border-r border-slate-700">Date</th>
+    <th className="px-3 py-3 border-r border-slate-700">Bill No</th>
+    <th className="px-3 py-3 border-r border-slate-700">Vehicle</th>
+    <th className="px-3 py-3 border-r border-slate-700">Driver</th>
+    <th className="px-3 py-3 border-r border-slate-700">Route</th>
+    <th className="px-3 py-3 border-r border-slate-700">Contractor</th>
+    <th className="px-3 py-3 border-r border-slate-700">Load</th>
+    <th className="px-3 py-3 border-r border-slate-700">Net Wt</th>
+    <th className="px-3 py-3 border-r border-slate-700">Rate</th>
+    <th className="px-3 py-3 border-r border-slate-700 bg-blue-900 text-blue-200">Total Rent</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-orange-400">Advance</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-red-300">Weighbridge</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-red-300">Expense</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-red-300">Loading</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-red-300">Unloading</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-green-300">Dr Pay</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-orange-300">Diesel Liter</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-orange-300">Fuel Price</th>
+    <th className="px-3 py-3 border-r border-slate-700 bg-red-900 text-red-200">Total Exp</th>
+    <th className="px-3 py-3 border-r border-slate-700 bg-emerald-900 text-emerald-200">Profit</th>
+    <th className="px-2 py-3 text-center no-print">Del</th>
+  </tr>
+</thead>
             <tbody className="divide-y divide-slate-100 text-[11px] font-medium">
                 {loading ? (
                     <tr><td colSpan={7} className="p-8 text-center text-slate-400">Loading History...</td></tr>
