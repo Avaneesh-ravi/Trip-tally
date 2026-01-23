@@ -21,7 +21,7 @@ const CONTRACTOR_LOADS: Record<string, string[]> = {
   "SBT": ["Rice", "Wheat", "Fertilizer"],
   "MP SAMY": ["Rape Seed"],
   "SS":["Maize"],
-  "KGS":["Sugar"]
+  "KGS":["Sugar"],
 };
 
 const DESTINATION_RATES = [
@@ -2585,35 +2585,23 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
 
  {/* --- UPDATED TABLE IN DRIVER DETAILS MODAL --- */}
 {/* --- UPDATED TABLE IN DRIVER DETAILS MODAL --- */}
+{/* --- UPDATED TABLE IN DRIVER DETAILS MODAL --- */}
+{/* --- UPDATED TABLE IN DRIVER DETAILS MODAL --- */}
+{/* --- UPDATED TABLE IN DRIVER DETAILS MODAL --- */}
 <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${submitting ? 'opacity-60 pointer-events-none select-none' : ''}`}>
     <div className="overflow-x-auto">
         <table className="w-full text-sm text-left">
             <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px] whitespace-nowrap">
-  <tr>
-    <th className="px-4 py-3 w-12 text-center no-print">{/* Hidden on print */}</th>
-    <th className="px-3 py-3 border-r border-slate-700">Date</th>
-    <th className="px-3 py-3 border-r border-slate-700">Bill No</th>
-    <th className="px-3 py-3 border-r border-slate-700">Vehicle</th>
-    <th className="px-3 py-3 border-r border-slate-700">Driver</th>
-    <th className="px-3 py-3 border-r border-slate-700">Route</th>
-    <th className="px-3 py-3 border-r border-slate-700">Contractor</th>
-    <th className="px-3 py-3 border-r border-slate-700">Load</th>
-    <th className="px-3 py-3 border-r border-slate-700">Net Wt</th>
-    <th className="px-3 py-3 border-r border-slate-700">Rate</th>
-    <th className="px-3 py-3 border-r border-slate-700 bg-blue-900 text-blue-200">Total Rent</th>
-    <th className="px-3 py-3 border-r border-slate-700 text-orange-400">Advance</th>
-    <th className="px-3 py-3 border-r border-slate-700 text-red-300">Weighbridge</th>
-    <th className="px-3 py-3 border-r border-slate-700 text-red-300">Expense</th>
-    <th className="px-3 py-3 border-r border-slate-700 text-red-300">Loading</th>
-    <th className="px-3 py-3 border-r border-slate-700 text-red-300">Unloading</th>
-    <th className="px-3 py-3 border-r border-slate-700 text-green-300">Dr Pay</th>
-    <th className="px-3 py-3 border-r border-slate-700 text-orange-300">Diesel Liter</th>
-    <th className="px-3 py-3 border-r border-slate-700 text-orange-300">Fuel Price</th>
-    <th className="px-3 py-3 border-r border-slate-700 bg-red-900 text-red-200">Total Exp</th>
-    <th className="px-3 py-3 border-r border-slate-700 bg-emerald-900 text-emerald-200">Profit</th>
-    <th className="px-2 py-3 text-center no-print">Del</th>
-  </tr>
-</thead>
+                <tr>
+                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Load</th>
+                    <th className="px-4 py-3 text-right text-orange-400">Advance</th>
+                    <th className="px-4 py-3 text-center">W / L / U / E Details</th>
+                    <th className="px-4 py-3 text-right text-green-400">Dr Pay</th>
+                    <th className="px-4 py-3 text-right text-red-400">Total Exp</th>
+                    <th className="px-4 py-3 text-right text-white bg-slate-700">Net Added</th>
+                </tr>
+            </thead>
             <tbody className="divide-y divide-slate-100 text-[11px] font-medium">
                 {loading ? (
                     <tr><td colSpan={7} className="p-8 text-center text-slate-400">Loading History...</td></tr>
@@ -2621,7 +2609,7 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
                     <tr><td colSpan={7} className="p-8 text-center text-slate-400">No active trips found.</td></tr>
                 ) : filteredHistory.map((h, index) => {
                     const isSelected = selectedTripIds.has(h.id);
-                    const netAddedValue = (h.driverTripPay - (h.advance - h.totalExpenses));
+                    const netAddedValue = h.netAmount; 
 
                     return (
                         <tr 
@@ -2629,41 +2617,32 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
                             onClick={() => !submitting && handleToggleRow(h.id)} 
                             className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-slate-50'}`}
                         >
-                            {/* REMOVED: <td className="px-4 py-3 w-12 text-center no-print">...</td> */}
-                            
-                            {/* 1. Date & Bill Number */}
                             <td className="px-4 py-3 font-bold text-slate-700">
-                                {h.date}<br/>
-                                <span className="text-slate-400 font-normal">{h.billNo}</span>
+                                {h.date}
                             </td>
-
-                            {/* 2. Route & Load */}
                             <td className="px-4 py-3">
-                                <div className="font-bold">{h.from} ➔ {h.to}</div>
-                                <div className="text-slate-400">{h.loadType} ({h.netWeight}T)</div>
+                                <div className="font-bold">{h.loadType}</div>
+                                <div className="text-slate-400">{h.netWeight}T</div>
                             </td>
-
-                            {/* 3. Advance */}
                             <td className="px-4 py-3 text-right text-orange-600 font-bold">
                                 ₹{h.advance.toLocaleString()}
                             </td>
-
-                            {/* 4. L / U / W / Extra */}
-                            <td className="px-4 py-3 text-center text-slate-600 bg-slate-50/50 font-mono">
-                                {h.loadingCharge} / {h.unloadingCharge} / {h.weighbridgeCharge} / <span className="text-red-500 font-bold">{h.extraExpense}</span>
+                            <td className="px-4 py-3 text-center bg-slate-50/50">
+                                <div className="flex flex-col items-center">
+                                    <div className="font-mono text-slate-700">
+                                        {h.weighbridgeCharge}/{h.loadingCharge}/{h.unloadingCharge}/<span className="text-red-500 font-bold">{h.extraExpense}</span>
+                                    </div>
+                                    <div className="text-[8px] text-slate-400 uppercase tracking-widest font-bold mt-0.5">
+                                        W / L / U / E
+                                    </div>
+                                </div>
                             </td>
-
-                            {/* 5. Dr Pay */}
                             <td className="px-4 py-3 text-right text-green-600 font-bold">
                                 ₹{h.driverTripPay.toLocaleString()}
                             </td>
-
-                            {/* 6. Total Exp */}
-                            <td className="px-4 py-3 text-right text-red-600 font-bold bg-red-50/50">
+                            <td className="px-4 py-3 text-right text-red-600 font-bold bg-red-50/30">
                                 ₹{h.totalExpenses.toLocaleString()}
                             </td>
-
-                            {/* 7. Net Added */}
                             <td className={`px-4 py-3 text-right font-bold border-l border-slate-100 ${
                                 netAddedValue >= 0 ? 'text-emerald-600 bg-emerald-50/10' : 'text-red-600 bg-red-50/10'
                             }`}>
