@@ -2205,76 +2205,35 @@ const DriverDetailsModal = ({ driver, setDrivers, setHistoryLogs, onClose, curre
             </div>
 
             <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${submitting ? 'opacity-60 pointer-events-none select-none' : ''}`}>
-    <table className="w-full text-sm text-left">
-        <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px]">
-            <tr>
-                <th className="px-4 py-3 w-12 text-center">
-                    <button onClick={toggleSelectAll} className="hover:text-white transition-colors">
-                        {selectedTripIds.size > 0 && selectedTripIds.size === filteredHistory.length ? <CheckSquare size={16}/> : <Square size={16}/>}
-                    </button>
-                </th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Route / Load</th>
-                <th className="px-4 py-3 text-right">Net Weight</th> {/* New Column */}
-                <th className="px-4 py-3 text-right text-orange-400">Advance</th>
-                <th className="px-4 py-3 text-right text-red-400">Weighbridge</th> {/* New Column */}
-                <th className="px-4 py-3 text-right text-red-400">Labor Exp</th>
-                <th className="px-4 py-3 text-right text-green-400">Dr Pay</th>
-                <th className="px-4 py-3 text-right text-white bg-slate-700">Net Added</th>
-            </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100 text-xs font-medium">
-            {loading ? (
-                <tr><td colSpan={9} className="p-8 text-center text-slate-400">Loading...</td></tr>
-            ) : filteredHistory.length === 0 ? (
-                <tr><td colSpan={9} className="p-8 text-center text-slate-400">No active trips.</td></tr>
-            ) : (
-                filteredHistory.map((h) => {
-                    const isSelected = selectedTripIds.has(h.id);
-                    // Separating expenses for the new column layout
-                    const laborExp = Math.round((Number(h.loadingCharge) || 0) + (Number(h.unloadingCharge) || 0));
-                    const weighbridge = Math.round(Number(h.weighbridgeCharge) || 0);
-                    
-                    return (
-                        <tr key={h.id} onClick={() => !submitting && handleToggleRow(h.id)} className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-slate-50'}`}>
-                            <td className="px-4 py-3 text-center">
-                                <div className={`flex justify-center ${isSelected ? 'text-indigo-600' : 'text-slate-300'}`}>
-                                    {isSelected ? <CheckSquare size={16}/> : <Square size={16}/>}
-                                </div>
-                            </td>
-                            <td className="px-4 py-3 font-bold text-slate-700">
-                                {h.date}<br/>
-                                <span className="text-slate-400 font-normal">{h.billNo}</span>
-                            </td>
-                            <td className="px-4 py-3">
-                                <span className="font-bold">{h.loadType}</span><br/>
-                                <span className="text-blue-600 font-semibold">➔ {h.to}</span> {/* Destination added here */}
-                            </td>
-                            <td className="px-4 py-3 text-right font-bold text-slate-700">
-                                {h.net_weight || h.netWeight} T
-                            </td>
-                            <td className="px-4 py-3 text-right text-orange-600 font-bold">
-                                ₹{h.advance}
-                            </td>
-                            <td className="px-4 py-3 text-right text-red-500">
-                                ₹{weighbridge}
-                            </td>
-                            <td className="px-4 py-3 text-right text-red-500">
-                                ₹{laborExp}
-                            </td>
-                            <td className="px-4 py-3 text-right text-green-600 font-bold">
-                                ₹{h.driverTripPay}
-                            </td>
-                            <td className={`px-4 py-3 text-right font-extrabold ${h.netAmount >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
-                                ₹{h.netAmount}
-                            </td>
+                <table className="w-full text-sm text-left">
+                    <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px]">
+                        <tr>
+                            <th className="px-4 py-3 w-12 text-center"><button onClick={toggleSelectAll} className="hover:text-white transition-colors">{selectedTripIds.size > 0 && selectedTripIds.size === filteredHistory.length ? <CheckSquare size={16}/> : <Square size={16}/>}</button></th>
+                            <th className="px-4 py-3">Date</th><th className="px-4 py-3">Route</th><th className="px-4 py-3 text-right">Rent</th><th className="px-4 py-3 text-right text-orange-400">Advance</th><th className="px-4 py-3 text-right text-red-400">Expense</th><th className="px-4 py-3 text-right text-green-400">Dr Pay</th><th className="px-4 py-3 text-right text-white bg-slate-700">Net</th>
                         </tr>
-                    );
-                })
-            )}
-        </tbody>
-    </table>
-</div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs font-medium">
+                        {loading ? <tr><td colSpan={8} className="p-8 text-center text-slate-400">Loading...</td></tr> : 
+                         filteredHistory.length === 0 ? <tr><td colSpan={8} className="p-8 text-center text-slate-400">No active trips.</td></tr> :
+                         filteredHistory.map((h) => {
+                             const isSelected = selectedTripIds.has(h.id);
+                             const exp = Math.round((Number(h.loadingCharge)||0)+(Number(h.unloadingCharge)||0)+(Number(h.weighbridgeCharge)||0));
+                             return (
+                                 <tr key={h.id} onClick={() => !submitting && handleToggleRow(h.id)} className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-slate-50'}`}>
+                                     <td className="px-4 py-3 text-center"><div className={`flex justify-center ${isSelected ? 'text-indigo-600' : 'text-slate-300'}`}>{isSelected ? <CheckSquare size={16}/> : <Square size={16}/>}</div></td>
+                                     <td className="px-4 py-3 font-bold text-slate-700">{h.date}<br/><span className="text-slate-400 font-normal">{h.billNo}</span></td>
+                                     <td className="px-4 py-3">{h.from} ➔ {h.to}<br/><span className="text-slate-400">{h.loadType}</span></td>
+                                     <td className="px-4 py-3 text-right font-bold text-blue-600">₹{h.tripTotal}</td>
+                                     <td className="px-4 py-3 text-right text-orange-600">₹{h.advance}</td>
+                                     <td className="px-4 py-3 text-right text-red-600">₹{exp}</td>
+                                     <td className="px-4 py-3 text-right text-green-600">₹{h.driverTripPay}</td>
+                                     <td className={`px-4 py-3 text-right font-bold ${h.netAmount>=0?'text-blue-600':'text-red-600'}`}>₹{h.netAmount}</td>
+                                 </tr>
+                             );
+                         })}
+                    </tbody>
+                </table>
+            </div>
         </div>
       </div>
     </div>
