@@ -19,13 +19,13 @@ const CONTRACTOR_LOADS: Record<string, string[]> = {
   "KSP": ["Maize", "Rape Seed", "Soya", "Fertilizer"],
   "TKS": ["Fertilizer"],
   "SBT": ["Rice", "Wheat", "Fertilizer"],
-  "MP SAMY": ["Rape Seed"],
-  "SS":["Maize"],
-  "KGS":["Sugar"],
+  "MP SAMY": ["Rape Seed"]
 };
 
 const DESTINATION_RATES = [
-  { name: "Null", rate: 0 },{ name: "KK Nagar", rate: 0 },{ name: "Thirumagal", rate: 0 },{ name: "SVM", rate: 0 },{ name: "SK Samy", rate: 0 },{ name: "RGS", rate: 295 },{ name: "Moolapalayam", rate: 90 },{ name: "Perundurai", rate: 295 },{ name: "Athani", rate: 430 }, { name: "Anthiyur", rate: 430 }, { name: "Ammapettai", rate: 445 },
+  { name: "Null", rate: 0 },{ name: "RGS", rate: 295 },
+  { name: "Perundurai-41", rate: 295 },{ name: "Perundurai-42", rate: 295 },{ name: "Perundurai-43", rate: 295 },{ name: "Perundurai-KK8", rate: 295 }
+  ,{ name: "SKM", rate: 200 },{ name: "KK Nagar", rate: 0 },{ name: "Thirumagal", rate: 0 },{ name: "SVM", rate: 0 },{ name: "SK Samy", rate: 0 },{ name: "Moolapalayam", rate: 90 },{ name: "Perundurai", rate: 295 },{ name: "Athani", rate: 430 }, { name: "Anthiyur", rate: 430 }, { name: "Ammapettai", rate: 445 },
   { name: "Arachalur", rate: 370 }, { name: "Alangiyam", rate: 600 }, { name: "Alukuli", rate: 460 },
   { name: "Avinashi", rate: 550 }, { name: "Hanumanpalli", rate: 350 }, { name: "Appakudal", rate: 410 },
   { name: "Anaimalai", rate: 700 }, { name: "Irayamangalam", rate: 365 }, { name: "Udumalpet", rate: 650 },
@@ -107,8 +107,7 @@ interface TripRecord {
   contractor: string;
   loadType: string;
   netWeight: string;  
-  expense?: number;
-
+  extraCharges: number;
   rate: number;
   tripTotal: number;
   loadingCharge: string;
@@ -159,7 +158,6 @@ interface Vehicle {
     commissionType: 'percentage' | 'fixed'; 
     commissionValue: string;
     advance: string;
-    expense?: string;
   };
 }
 
@@ -226,7 +224,7 @@ const printSection = (elementId: string, title: string) => {
   const content = document.getElementById(elementId)?.innerHTML;
   if (!content) return;
 
-  const printWindow = window.open('', '', 'width=1000,height=800');
+  const printWindow = window.open('', '', 'width=900,height=600');
   if (printWindow) {
     printWindow.document.write(`
       <html>
@@ -234,39 +232,24 @@ const printSection = (elementId: string, title: string) => {
           <title>${title}</title>
           <script src="https://cdn.tailwindcss.com"></script>
           <style>
-            @media print {
-              body { font-family: 'Inter', sans-serif; padding: 10px; color: #000; }
-              .no-print { display: none !important; }
-              table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px; }
-              th, td { border: 1px solid #e2e8f0; padding: 8px 4px; text-align: left; }
-              th { background-color: #f8fafc !important; -webkit-print-color-adjust: exact; }
-              .summary-box { border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
-              .font-bold { font-weight: 700; }
-              .text-right { text-align: right; }
-              .text-center { text-align: center; }
-              /* Ensure colors print */
-              .text-emerald-600 { color: #059669 !important; }
-              .text-red-600 { color: #dc2626 !important; }
-              .bg-slate-50 { background-color: #f8fafc !important; }
-            }
+            body { font-family: sans-serif; padding: 20px; -webkit-print-color-adjust: exact; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+            th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
+            th { background-color: #f1f5f9; color: #334155; }
+            .no-print { display: none !important; }
+            h2, h3 { color: #1e293b; margin-bottom: 10px; }
           </style>
         </head>
         <body>
-          <div class="flex justify-between items-center border-b pb-4 mb-4">
-            <div>
-              <h1 class="text-2xl font-bold">${title}</h1>
-              <p class="text-sm text-gray-500 font-medium">Generated on: ${new Date().toLocaleDateString()}</p>
-            </div>
-            <div class="text-right">
-              <p class="font-bold text-lg">Trip Tally Fleet Management</p>
-            </div>
-          </div>
+          <h1 class="text-2xl font-bold mb-4 text-center border-b pb-2">${title}</h1>
           ${content}
+          <script>
+            setTimeout(() => { window.print(); window.close(); }, 500);
+          </script>
         </body>
       </html>
     `);
     printWindow.document.close();
-    setTimeout(() => { printWindow.print(); printWindow.close(); }, 750);
   }
 };
 
@@ -378,10 +361,10 @@ export default function LMSApp() {
           vehicleDetails: v.details || {},
           rentInfo: v.rent_info || { total: 0, received: 0, pending: 0 },
           currentTrip: { 
-              date: '', billNo: '', driverName: '', to: '', contractor: '', loadType: '', 
-              netWeight: '', rate: 0, tripTotal: 0, loadingCharge: '', unloadingCharge: '', 
-              driverTripPay: 0, dieselPrice: '', dieselLiters: '', weighbridgeCharge: '', 
-              from: '', commissionType: 'percentage', commissionValue: '15', advance: '' 
+             date: '', billNo: '', driverName: '', to: '', contractor: '', loadType: '', 
+             netWeight: '', rate: 0, tripTotal: 0, loadingCharge: '', unloadingCharge: '', 
+             driverTripPay: 0, dieselPrice: '', dieselLiters: '', weighbridgeCharge: '', 
+             from: '', commissionType: 'percentage', commissionValue: '15', advance: '' 
           }
         })));
       }
@@ -418,8 +401,7 @@ export default function LMSApp() {
           contractor: t.contractor,
           loadType: t.load_type,
           netWeight: t.net_weight,
-          expense: t.expense || 0,
-
+          kilometers: t.kilometers,
           rate: t.rate,
           tripTotal: t.trip_total,
           driverTripPay: t.driver_trip_pay,
@@ -691,22 +673,15 @@ const DashboardView = ({ vehicles, setVehicles, drivers, setDrivers, transaction
     permitValidUpto: '', nationalPermitNo: '', nationalPermitValidUpto: '', registeringAuthority: '', greenTax: ''
   });
     
-const [tripForm, setTripForm] = useState({ 
-  date: '', billNo: '', driverName: '', to: '', contractor: '', 
-  loadType: '', netWeight: '', rate: 0, tripTotal: 0,
-  loadingCharge: '500',           // ✅ PRE-FILLED DEFAULT
-  unloadingCharge: '0',
-  driverTripPay: 0, 
-  dieselPrice: '0', 
-  dieselLiters: '0', 
-  weighbridgeCharge: '130', 
-  from: '',
-  expense: '0',
-  commissionType: 'percentage' as 'percentage' | 'fixed', 
-  commissionValue: '15',
-  advance: '0'
-});
-
+  const [tripForm, setTripForm] = useState({ 
+    date: '', billNo: '', driverName: '', to: '', contractor: '', 
+    loadType: '', netWeight: '', rate: 0, tripTotal: 0,
+    loadingCharge: '', unloadingCharge: '', driverTripPay: 0, 
+    dieselPrice: '', dieselLiters: '', weighbridgeCharge: '130', 
+    from: '', kilometers: '', 
+    commissionType: 'percentage' as 'percentage' | 'fixed', 
+    commissionValue: '15', advance: '' 
+  });
     
   const [errors, setErrors] = useState<string[]>([]);
   const [rentForm, setRentForm] = useState({ date: '', time: '', total: '', received: '', pending: '', commissionRate: '0.15' });
@@ -766,19 +741,19 @@ const [tripForm, setTripForm] = useState({
   };
 
   const openActionModal = (type: string, vehicle: Vehicle) => {
-  if (type === 'driver') { setShowDriverList(true); return; }
-  setActiveModal({ type, data: vehicle, vehicleId: vehicle.id });
-  setErrors([]); 
-  setEditingTripId(null);
-  setShowEditSearch(false);
-  setEditSearchForm({ billNo: '', date: '' });
-  setIsSubmitting(false); 
+    if (type === 'driver') { setShowDriverList(true); return; }
+    setActiveModal({ type, data: vehicle, vehicleId: vehicle.id });
+    setErrors([]); 
+    setEditingTripId(null);
+    setShowEditSearch(false);
+    setEditSearchForm({ billNo: '', date: '' });
+    setIsSubmitting(false); 
 
-  setIsCustomContractor(false);
-  setIsCustomLoad(false);
-  setIsCustomDestination(false);
+    setIsCustomContractor(false);
+    setIsCustomLoad(false);
+    setIsCustomDestination(false);
 
-  if(type === 'trip') {
+    if(type === 'trip') {
       const currentContractor = vehicle.currentTrip.contractor;
       const currentLoad = vehicle.currentTrip.loadType;
       const currentDest = vehicle.currentTrip.to;
@@ -792,16 +767,14 @@ const [tripForm, setTripForm] = useState({
       if (currentDest && !isKnownDest) setIsCustomDestination(true);
 
       setTripForm({ 
-        
         ...vehicle.currentTrip, 
-        loadingCharge: vehicle.currentTrip.loadingCharge || '500', 
-      weighbridgeCharge: vehicle.currentTrip.weighbridgeCharge || '130',
-      commissionType: vehicle.currentTrip.commissionType || 'percentage',
-      commissionValue: vehicle.currentTrip.commissionValue || '15',
-      advance: vehicle.currentTrip.advance || '0',
-      expense: vehicle.currentTrip.expense || '0'
-    } as any); 
-  } else if (type === 'rent') {
+        weighbridgeCharge: vehicle.currentTrip.weighbridgeCharge || '130',
+        commissionType: vehicle.currentTrip.commissionType || 'percentage',
+        commissionValue: vehicle.currentTrip.commissionValue || '15',
+        advance: vehicle.currentTrip.advance || '',
+        kilometers: '' 
+      } as any); 
+    } else if (type === 'rent') {
       setRentForm({
         date: vehicle.rentInfo.date || '', time: vehicle.rentInfo.time || '', total: vehicle.rentInfo.total.toString(), 
         received: vehicle.rentInfo.received.toString(), pending: vehicle.rentInfo.pending.toString(), commissionRate: '0.15'
@@ -833,73 +806,50 @@ const [tripForm, setTripForm] = useState({
 
   const handleDriverSelect = (driver: Driver) => { setShowDriverList(false); setSelectedDriverForModal(driver); };
     
-const handleDestinationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-  const value = e.target.value;
-  
-  if (value === "REQ_CUSTOM") {
-    setIsCustomDestination(true);
-    setTripForm({ ...tripForm, to: '', rate: 0 });
-  } else {
-    const selectedObj = DESTINATION_RATES.find(d => d.name === value);
-    
-    let unloading = "0";
-    let weighbridge = tripForm.weighbridgeCharge;
-
-    // --- RGS LOGIC FOR UNLOADING CHARGE ---
-    if (value === "RGS") {
-      const weight = Number(tripForm.netWeight) || 0;
-      // Formula: (45 * weight) + 30
-      unloading = weight > 0 ? Math.round((45 * weight) + 30).toString() : "0";
-      
-      // Maize rule: if load is Maize, weighbridge is 0, else 130
-      weighbridge = tripForm.loadType === "Maize" ? "0" : "130";
+  const handleDestinationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    if (value === "REQ_CUSTOM") {
+      setIsCustomDestination(true);
+      setTripForm({ ...tripForm, to: '', rate: 0 });
     } else {
-      weighbridge = tripForm.loadType === "Maize" ? "0" : "130";
-      unloading = "0"; 
+      const selectedObj = DESTINATION_RATES.find(d => d.name === value);
+      setTripForm({ ...tripForm, to: value, rate: selectedObj ? selectedObj.rate : 0 });
     }
+    setErrors(prev => prev.filter(err => err !== 'to'));
+  };
 
-    setTripForm({ 
-      ...tripForm, 
-      to: value, 
-      rate: selectedObj ? selectedObj.rate : 0,
-      unloadingCharge: unloading,
-      weighbridgeCharge: weighbridge
-    });
-  }
-  setErrors(prev => prev.filter(err => err !== 'to'));
-};
+  const handleInputChange = (field: string, value: string) => {
+    let updatedForm = { ...tripForm, [field]: value };
 
-const handleInputChange = (field: string, value: string) => {
-  let updatedForm = { ...tripForm, [field]: value };
+    if (field === 'billNo' && value === '0') {
+      
+      setIsCustomContractor(false);
+      setIsCustomLoad(false);
+      setIsCustomDestination(false);
 
-  // --- AUTO-CALCULATE RGS UNLOADING WHEN WEIGHT CHANGES ---
-  if (field === 'netWeight' && updatedForm.to === 'RGS') {
-    const weight = Number(value) || 0;
-    updatedForm.unloadingCharge = Math.round((45 * weight) + 30).toString();
-  }
-
-  // --- REST OF YOUR EXISTING LOGIC ---
-  if (field === 'billNo') {
-    if (value === '0') {
       updatedForm = {
         ...updatedForm,
-        contractor: '', loadType: '', to: '', netWeight: '', expense: '0',
-        rate: 0, tripTotal: 0, 
+        
+        contractor: '',
+        loadType: '',
+        to: '', 
+        netWeight: '', 
+        
+        kilometers: '0',
+        rate: 0,
+        tripTotal: 0,
         loadingCharge: '0',
         unloadingCharge: '0',
-        weighbridgeCharge: '0', 
-        dieselPrice: '0', dieselLiters: '0',
-        driverTripPay: 0, advance: '0'
+        weighbridgeCharge: '0',
+        dieselPrice: '0',
+        dieselLiters: '0',
+        driverTripPay: 0,
       };
-    } else if (value !== '' && tripForm.billNo === '0') {
-      updatedForm.loadingCharge = '500';
-      updatedForm.weighbridgeCharge = '130';
     }
-  }
 
-  setTripForm(updatedForm);
-  setErrors(prev => prev.filter(err => err !== field));
-};
+    setTripForm(updatedForm);
+    setErrors(prev => prev.filter(err => err !== field));
+  };
 
   const handleSaveTrip = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -913,23 +863,18 @@ const handleInputChange = (field: string, value: string) => {
     const safeLoading = Number(tripForm.loadingCharge) || 0;
     const safeUnloading = Number(tripForm.unloadingCharge) || 0;
     const safeWeighbridge = Number(tripForm.weighbridgeCharge) || 0;
-    const safeExtraExp = Number(tripForm.expense) || 0;
+    const safeDieselLiters = Number(tripForm.dieselLiters) || 0;
+    const safeDieselPrice = Number(tripForm.dieselPrice) || 0;
 
     const total = safeNetWeight * safeRate;
-    
-    // Calculate Gross Pay
     let grossPay = 0;
     if (tripForm.commissionType === 'percentage') {
       grossPay = total * (safeCommissionVal / 100);
     } else {
       grossPay = safeCommissionVal;
     }
-
-    // Combined Expenses
-    const totalExpenses = safeLoading + safeUnloading + safeWeighbridge + safeExtraExp;
-
-    // NEW FORMULA: Gross Pay - Advance - Total Expenses
-    const finalPay = grossPay - (safeAdvance - totalExpenses);
+    const deductions = safeAdvance + safeLoading + safeUnloading + safeWeighbridge;
+    const finalPay = grossPay - deductions;
 
     const currentVehicle = vehicles.find((v: any) => v.id === activeModal?.vehicleId);
     const currentDriver = drivers.find((d: any) => d.name === tripForm.driverName);
@@ -945,27 +890,30 @@ const handleInputChange = (field: string, value: string) => {
         bill_no: tripForm.billNo, 
         vehicle_reg: currentVehicle.regNumber, 
         driver_id: currentDriver.id,
-        user_id: currentUser.id,
+        user_id: currentUser.id, // ADDED USER ID
+        
         contractor: tripForm.contractor || null, 
         load_type: tripForm.loadType || null, 
         from_loc: tripForm.from, 
         to_loc: tripForm.to || null,
+        
         net_weight: safeNetWeight,
-        expense: safeExtraExp,
-        rate: safeRate,
-        trip_total: total,
+        kilometers: Number(tripForm.kilometers) || 0, 
+        rate: safeRate, 
+        trip_total: total, 
         advance: safeAdvance,
         loading_charge: safeLoading, 
         unloading_charge: safeUnloading, 
         weighbridge_charge: safeWeighbridge,
-        diesel_liters: Number(tripForm.dieselLiters) || 0, 
-        diesel_price: Number(tripForm.dieselPrice) || 0, 
+        diesel_liters: safeDieselLiters, 
+        diesel_price: safeDieselPrice, 
         driver_trip_pay: grossPay, 
-        final_pay: finalPay, // This uses the new formula
+        final_pay: finalPay,
         commission_type: tripForm.commissionType, 
         commission_value: tripForm.commissionValue,
         status: 'active'
     };
+
     if (editingTripId) {
       const { error: updateError } = await supabase.from('trips').update(dbTrip).eq('id', editingTripId);
       
@@ -1116,14 +1064,7 @@ const handleInputChange = (field: string, value: string) => {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                 <Input 
-  label="Extra Expense (₹)" 
-  type="number" 
-  value={tripForm.expense} 
-  onChange={(e) => handleInputChange('expense', e.target.value)} 
-  placeholder="0"
-/>
-
+                 <Input label="Kilometers (Km)" type="number" value={tripForm.kilometers} onChange={(e) => handleInputChange('kilometers', e.target.value)} placeholder="0" />
                  <Input label="Net Weight *" type="number" value={tripForm.netWeight} onChange={(e) => handleInputChange('netWeight', e.target.value)} required error={errors.includes('netWeight')} />
               </div>
 
@@ -1132,43 +1073,17 @@ const handleInputChange = (field: string, value: string) => {
                  <div></div>
               </div>
 
-             
+              <h4 className="font-bold text-xs text-blue-600 uppercase mt-2">Fuels</h4>
+              <div className="grid grid-cols-2 gap-3">
+                 <Input label="Diesel Liters" value={tripForm.dieselLiters} onChange={(e) => handleInputChange('dieselLiters', e.target.value)} error={errors.includes('dieselLiters')} />
+                 <Input label="Fuel Price" type="number" value={tripForm.dieselPrice} onChange={(e) => handleInputChange('dieselPrice', e.target.value)} error={errors.includes('dieselPrice')} />
+              </div>
               
-              {/* --- LABOUR CHARGES SECTION --- */}
-{/* --- LABOUR CHARGES SECTION --- */}
-{/* --- LABOUR CHARGES --- */}
-{/* --- LABOUR CHARGES SECTION --- */}
-<h4 className="font-bold text-xs text-blue-600 uppercase mt-2">Labour Charges</h4>
-<div className="grid grid-cols-2 gap-3 bg-slate-50 p-2 rounded border border-slate-100">
-  <Input 
-    label="Loading Charge *" 
-    type="number" 
-    value={tripForm.loadingCharge} 
-    onChange={(e) => handleInputChange('loadingCharge', e.target.value)} 
-  />
-  <Input 
-    label="Unloading Charge *" 
-    type="number" 
-    value={tripForm.unloadingCharge} 
-    onChange={(e) => handleInputChange('unloadingCharge', e.target.value)} 
-  />
-</div>
-
-{/* --- FUELS (Kept below Labour Charges) --- */}
-<h4 className="font-bold text-xs text-blue-600 uppercase mt-4">Fuels</h4>
-<div className="grid grid-cols-2 gap-3">
-  <Input 
-    label="Diesel Liters" 
-    value={tripForm.dieselLiters} 
-    onChange={(e) => handleInputChange('dieselLiters', e.target.value)} 
-  />
-  <Input 
-    label="Fuel Price" 
-    type="number" 
-    value={tripForm.dieselPrice} 
-    onChange={(e) => handleInputChange('dieselPrice', e.target.value)} 
-  />
-</div>
+              <h4 className="font-bold text-xs text-blue-600 uppercase mt-2">Labour Charges</h4>
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 p-2 rounded border border-slate-100">
+               <Input label="Loading Charge *" type="number" value={tripForm.loadingCharge} onChange={(e) => handleInputChange('loadingCharge', e.target.value)} error={errors.includes('loadingCharge')} />
+               <Input label="Unloading Charge *" type="number" value={tripForm.unloadingCharge} onChange={(e) => handleInputChange('unloadingCharge', e.target.value)} error={errors.includes('unloadingCharge')} />
+              </div>
               <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mt-2">
                  <div className="flex justify-between items-center mb-2">
                     <div className="flex gap-2 items-center">
@@ -1495,8 +1410,7 @@ const FuelView = ({ trips, filterReg, setFilterReg, setTrips }: any) => {
                     <td className="px-6 py-4 font-bold text-slate-700">{trip.date}</td>
                     <td className="px-6 py-4 font-bold text-blue-600">{trip.regNumber}</td>
                     <td className="px-6 py-4 text-slate-500">{trip.from} ➔ {trip.to}</td>
-                    <td className="px-6 py-4 text-right font-mono text-slate-600">{trip.expense
- || '-'}</td>
+                    <td className="px-6 py-4 text-right font-mono text-slate-600">{trip.kilometers || '-'}</td>
                     <td className="px-6 py-4 text-right font-mono">{trip.dieselLiters || '-'} L</td>
                     <td className="px-6 py-4 text-right font-bold text-orange-600">₹ {Number(trip.dieselPrice).toLocaleString()}</td>
                     <td className="px-6 py-4">
@@ -1523,7 +1437,10 @@ const TripsView = ({ trips, handleFilterSelect, handleDeleteTrip }: any) => {
   const [endDate, setEndDate] = useState('');
 
   const filteredTrips = trips.filter((t: any) => {
+    // 1. STRICTLY HIDE BILL NO 0
     if (String(t.billNo) === "0") return false;
+
+    // 2. Date Filter
     if (!startDate && !endDate) return true;
     const tripDate = new Date(t.date);
     const start = startDate ? new Date(startDate) : new Date('1900-01-01');
@@ -1540,75 +1457,65 @@ const TripsView = ({ trips, handleFilterSelect, handleDeleteTrip }: any) => {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
         <table className="w-full text-sm text-left">
           <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs whitespace-nowrap">
-  <tr>
-    <th className="px-4 py-3">Date</th>
-    <th className="px-4 py-3">Bill No</th>
-    <th className="px-4 py-3 border-l border-r border-slate-200 bg-slate-100">Vehicle</th>
-    <th className="px-4 py-3">Driver</th>
-    <th className="px-4 py-3">Route</th>
-    <th className="px-4 py-3">Contractor</th>
-    <th className="px-4 py-3">Load</th>
-    <th className="px-4 py-3">Net Wt</th>
-    <th className="px-4 py-3">Rate</th>
-    <th className="px-4 py-3 font-extrabold text-blue-700 bg-blue-50">Total Rent</th>
-    <th className="px-4 py-3 text-blue-600">Advance</th>
-    <th className="px-4 py-3 bg-indigo-50/30 font-mono">Expense</th>
-    <th className="px-4 py-3">Load/Unload</th>
-    <th className="px-4 py-3 bg-orange-50 text-orange-700">Diesel Liter</th>
-    <th className="px-4 py-3 bg-orange-50 text-orange-700">Fuel Price</th>
-    <th className="px-4 py-3">Weighbridge</th>
-    <th className="px-4 py-3">Dr. Pay</th>
-    <th className="px-4 py-3 font-extrabold text-red-700 bg-red-50">Total Expense</th>
-    <th className="px-4 py-3 font-extrabold text-slate-700 bg-slate-50 text-right">Profit</th>
-    <th className="px-4 py-3 text-center">Action</th>
-  </tr>
-</thead>
+            <tr>
+              <th className="px-4 py-3">Date</th>
+              <th className="px-4 py-3">Bill No</th>
+              <th className="px-4 py-3 border-l border-r border-slate-200 bg-slate-100">Vehicle</th>
+              <th className="px-4 py-3">Driver</th>
+              <th className="px-4 py-3">Route</th>
+              <th className="px-4 py-3">Contractor</th>
+              <th className="px-4 py-3">Load</th>
+              <th className="px-4 py-3">Net Wt</th>
+              <th className="px-4 py-3 bg-indigo-50 text-indigo-700">Km</th>
+              <th className="px-4 py-3">Rate</th>
+              <th className="px-4 py-3 font-extrabold text-blue-700 bg-blue-50">Total Rent</th>
+              <th className="px-4 py-3 text-blue-600">Advance</th>
+              <th className="px-4 py-3">Load/Unload</th>
+              <th className="px-4 py-3 bg-orange-50 text-orange-700">Diesel Liter</th>
+              <th className="px-4 py-3 bg-orange-50 text-orange-700">Fuel Price</th>
+              <th className="px-4 py-3">Weighbridge</th>
+              <th className="px-4 py-3">Dr. Pay</th>
+              <th className="px-4 py-3 font-extrabold text-red-700 bg-red-50">Total Expense</th>
+              <th className="px-4 py-3 font-extrabold text-slate-700 bg-slate-50 text-right">Profit</th>
+              <th className="px-4 py-3 text-center">Action</th>
+            </tr>
+          </thead>
           <tbody className="divide-y divide-slate-100 whitespace-nowrap">
-  {filteredTrips.length === 0 ? (
-    <tr><td colSpan={20} className="p-6 text-center text-slate-400">No trips recorded for this period.</td></tr>
-  ) : (
-    filteredTrips.map((trip: any, index: number) => {
-      const totalExpense =
-        Number(trip.loadingCharge || 0) +
-        Number(trip.unloadingCharge || 0) +
-        Number(trip.dieselPrice || 0) +
-        Number(trip.weighbridgeCharge || 0) +
-        Number(trip.driverTripPay || 0) +
-        Number(trip.expense || 0);
-
-      const profit = (Number(trip.tripTotal) || 0) - totalExpense;
-      
-      return (
-        <tr key={`${trip.id}-${index}`} className="hover:bg-slate-50">
-          <td className="px-4 py-3">{trip.date}</td>
-          <td className="px-4 py-3 font-mono">{trip.billNo}</td>
-          <td className="px-4 py-3 font-bold border-l border-r border-slate-100 bg-slate-50/30 cursor-pointer text-blue-600 hover:underline" onClick={() => handleFilterSelect && handleFilterSelect(trip.regNumber, 'trips')}>{trip.regNumber}</td>
-          <td className="px-4 py-3">{trip.driverName}</td>
-          <td className="px-4 py-3">{trip.from} ➔ {trip.to}</td>
-          <td className="px-4 py-3">{trip.contractor}</td>
-          <td className="px-4 py-3">{trip.loadType}</td>
-          <td className="px-4 py-3">{trip.netWeight}</td>
-          <td className="px-4 py-3">₹{trip.rate}</td>
-          <td className="px-4 py-3 font-bold text-blue-700 bg-blue-50/50">₹{(trip.tripTotal || 0).toLocaleString()}</td>
-          <td className="px-4 py-3 text-blue-600 font-medium">₹{trip.advance}</td>
-          <td className="px-4 py-3 bg-indigo-50/30 font-mono">₹{Number(trip.expense || 0).toLocaleString()}</td>
-          <td className="px-4 py-3 text-red-500">{trip.loadingCharge} / {trip.unloadingCharge}</td>
-          <td className="px-4 py-3 bg-orange-50/30">{trip.dieselLiters} L</td>
-          <td className="px-4 py-3 bg-orange-50/30">₹{trip.dieselPrice}</td>
-          <td className="px-4 py-3">₹{trip.weighbridgeCharge}</td>
-          <td className="px-4 py-3 text-green-600">₹{(trip.driverTripPay || 0).toLocaleString()}</td>
-          <td className="px-4 py-3 font-bold text-red-700 bg-red-50/50">₹{totalExpense.toLocaleString()}</td>
-          <td className={`px-4 py-3 font-bold bg-slate-50/50 text-right ${profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>₹{profit.toLocaleString()}</td>
-          <td className="px-4 py-3 text-center">
-            <button onClick={() => handleDeleteTrip(trip.id)} className="p-2 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors" title="Delete Trip">
-              <Trash2 size={16} />
-            </button>
-          </td>
-        </tr>
-      );
-    })
-  )}
-</tbody>
+            {filteredTrips.length === 0 ? (
+              <tr><td colSpan={20} className="p-6 text-center text-slate-400">No trips recorded for this period.</td></tr>
+            ) : (
+              filteredTrips.map((trip: any) => {
+                const totalExpense = Number(trip.loadingCharge || 0) + Number(trip.unloadingCharge || 0) + Number(trip.dieselPrice || 0) + Number(trip.weighbridgeCharge || 0) + Number(trip.driverTripPay || 0);
+                const profit = (Number(trip.tripTotal) || 0) - totalExpense;
+                return (
+                  <tr key={trip.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3">{trip.date}</td>
+                    <td className="px-4 py-3 font-mono">{trip.billNo}</td>
+                    <td className="px-4 py-3 font-bold border-l border-r border-slate-100 bg-slate-50/30 cursor-pointer text-blue-600 hover:underline" onClick={() => handleFilterSelect && handleFilterSelect(trip.regNumber, 'trips')}>{trip.regNumber}</td>
+                    <td className="px-4 py-3">{trip.driverName}</td>
+                    <td className="px-4 py-3">{trip.from} ➔ {trip.to}</td>
+                    <td className="px-4 py-3">{trip.contractor}</td>
+                    <td className="px-4 py-3">{trip.loadType}</td>
+                    <td className="px-4 py-3">{trip.netWeight}</td>
+                    <td className="px-4 py-3 bg-indigo-50/30 font-mono">{trip.kilometers || '-'}</td>
+                    <td className="px-4 py-3">₹{trip.rate}</td>
+                    <td className="px-4 py-3 font-bold text-blue-700 bg-blue-50/50">₹{(trip.tripTotal || 0).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-blue-600 font-medium">₹{trip.advance}</td>
+                    <td className="px-4 py-3 text-red-500">{trip.loadingCharge} / {trip.unloadingCharge}</td>
+                    <td className="px-4 py-3 bg-orange-50/30">{trip.dieselLiters} L</td>
+                    <td className="px-4 py-3 bg-orange-50/30">₹{trip.dieselPrice}</td>
+                    <td className="px-4 py-3">₹{trip.weighbridgeCharge}</td>
+                    <td className="px-4 py-3 text-green-600">₹{(trip.driverTripPay || 0).toLocaleString()}</td>
+                    <td className="px-4 py-3 font-bold text-red-700 bg-red-50/50">₹{totalExpense.toLocaleString()}</td>
+                    <td className={`px-4 py-3 font-bold bg-slate-50/50 text-right ${profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>₹{profit.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-center">
+                      <button onClick={() => handleDeleteTrip(trip.id)} className="p-2 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors" title="Delete Trip"><Trash2 size={16} /></button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
         </table>
       </div>
     </div>
@@ -1677,7 +1584,6 @@ const DriversView = ({ drivers, setDrivers, trips, setTrips, currentUser }: any)
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              
               {drivers.map((driver: Driver) => {
                 const netAdded = -driver.walletBalance; 
                 return (
@@ -1725,25 +1631,14 @@ const FinanceView = ({ transactions, drivers, trips, handleDeleteTrip }: any) =>
   const totalRentRevenue = Math.round(filteredTrips.reduce((acc: number, trip: TripRecord) => acc + (Number(trip.tripTotal) || 0), 0));
   const totalFuelLiters = Math.round(filteredTrips.reduce((acc: number, trip: TripRecord) => acc + (Number(trip.dieselLiters) || 0), 0));
     
-const totalExpenses = Math.round(
-  filteredTrips.reduce((acc: number, trip: TripRecord) => {
-    return (
-      acc +
-      (Number(trip.expense) || 0) +
+  const totalExpenses = Math.round(filteredTrips.reduce((acc: number, trip: TripRecord) => {
+    return acc + 
+      (Number(trip.loadingCharge) || 0) + 
+      (Number(trip.unloadingCharge) || 0) + 
+      (Number(trip.dieselPrice) || 0) + 
       (Number(trip.weighbridgeCharge) || 0) +
-      (Number(trip.loadingCharge) || 0) +
-      (Number(trip.unloadingCharge) || 0) +
-      (Number(trip.dieselPrice) || 0) +
-      (Number(trip.driverTripPay) || 0)
-    );
-  }, 0)
-);
-
-
-
-
-
-
+      (Number(trip.driverTripPay) || 0); 
+  }, 0));
 
   const totalProfit = totalRentRevenue - totalExpenses;
 
@@ -1762,7 +1657,7 @@ const totalExpenses = Math.round(
             const profit = tripTotal - tripExpense;
             
             return [
-                t.date, t.billNo, t.regNumber, t.driverName, `"${t.from} - ${t.to}"`, t.contractor, t.loadType, t.netWeight, t.expense || 0, t.rate,
+                t.date, t.billNo, t.regNumber, t.driverName, `"${t.from} - ${t.to}"`, t.contractor, t.loadType, t.netWeight, t.kilometers || 0, t.rate,
                 tripTotal, t.advance, t.weighbridgeCharge, 
                 (Number(t.loadingCharge)||0) + (Number(t.unloadingCharge)||0),
                 drPay, t.dieselLiters, t.dieselPrice, tripExpense, profit
@@ -1822,12 +1717,8 @@ const totalExpenses = Math.round(
             <div className="overflow-x-auto">
             <table className="w-full text-sm text-left border-collapse">
               <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px] whitespace-nowrap">
-                {/* Move the comment inside the <th> or remove it */}
-<tr>
-  <th className="px-4 py-3 w-12 text-center no-print">
-    {/* Hidden on print */}
-  </th>
-  <th className="px-3 py-3 border-r border-slate-700">Date</th>
+                <tr>
+                  <th className="px-3 py-3 border-r border-slate-700">Date</th>
                   <th className="px-3 py-3 border-r border-slate-700">Bill No</th>
                   <th className="px-3 py-3 border-r border-slate-700">Vehicle</th>
                   <th className="px-3 py-3 border-r border-slate-700">Driver</th>
@@ -1835,17 +1726,12 @@ const totalExpenses = Math.round(
                   <th className="px-3 py-3 border-r border-slate-700">Contractor</th>
                   <th className="px-3 py-3 border-r border-slate-700">Load</th>
                   <th className="px-3 py-3 border-r border-slate-700">Net Wt</th>
-                  
+                  <th className="px-3 py-3 border-r border-slate-700 bg-indigo-900 text-indigo-200">Km</th>
                   <th className="px-3 py-3 border-r border-slate-700">Rate</th>
                   <th className="px-3 py-3 border-r border-slate-700 bg-blue-900 text-blue-200">Total Rent</th>
                   <th className="px-3 py-3 border-r border-slate-700 text-orange-400">Advance</th>
                   <th className="px-3 py-3 border-r border-slate-700 text-red-300">Weighbridge</th>
-                  
-                <th className="px-3 py-3 border-r border-slate-700 text-red-300">Expense</th>
-
-<th className="px-3 py-3 border-r border-slate-700 text-red-300">Loading</th>
-<th className="px-3 py-3 border-r border-slate-700 text-red-300">Unloading</th>
-
+                  <th className="px-3 py-3 border-r border-slate-700 text-red-300">Load/Unload</th>
                   <th className="px-3 py-3 border-r border-slate-700 text-green-300">Dr Pay</th>
                   <th className="px-3 py-3 border-r border-slate-700 text-orange-300">Diesel Liter</th>
                   <th className="px-3 py-3 border-r border-slate-700 text-orange-300">Fuel Price</th>
@@ -1855,58 +1741,44 @@ const totalExpenses = Math.round(
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-medium whitespace-nowrap">
-  {filteredTrips.length === 0 ? (
-    <tr>
-      <td colSpan={22} className="p-8 text-center text-slate-400">No records found for this period.</td>
-    </tr>
-  ) : (
-    filteredTrips.map((trip: TripRecord, index: number) => {
-      const drPay = Math.round(Number(trip.driverTripPay) || 0);
-      const tripExpense = Math.round(
-        (Number(trip.loadingCharge) || 0) +
-        (Number(trip.unloadingCharge) || 0) +
-        (Number(trip.dieselPrice) || 0) +
-        (Number(trip.weighbridgeCharge) || 0) +
-        drPay +
-        (Number(trip.expense) || 0)
-      );
+                {filteredTrips.length === 0 ? (
+                  <tr><td colSpan={20} className="p-8 text-center text-slate-400">No records found for this period.</td></tr>
+                ) : (
+                  filteredTrips.map((trip: TripRecord) => {
+                    const drPay = Math.round(Number(trip.driverTripPay) || 0);
+                    const tripExpense = Math.round((Number(trip.loadingCharge)||0) + (Number(trip.unloadingCharge)||0) + (Number(trip.dieselPrice)||0) + (Number(trip.weighbridgeCharge)||0) + drPay);
+                    const tripTotal = Math.round(Number(trip.tripTotal) || 0);
+                    const tripProfit = tripTotal - tripExpense;
 
-      const tripTotal = Math.round(Number(trip.tripTotal) || 0);
-      const tripProfit = tripTotal - tripExpense;
-
-      return (
-        <tr key={`${trip.id}-${index}`} className="hover:bg-blue-50 transition-colors">
-          <td className="px-4 py-2 no-print"></td>
-          <td className="px-3 py-2 border-r border-slate-50">{trip.date}</td>
-          <td className="px-3 py-2 border-r border-slate-50 font-mono text-slate-500">{trip.billNo}</td>
-          <td className="px-3 py-2 border-r border-slate-50 font-bold text-slate-700">{trip.regNumber}</td>
-          <td className="px-3 py-2 border-r border-slate-50">{trip.driverName}</td>
-          <td className="px-3 py-2 border-r border-slate-50">{trip.from} - {trip.to}</td>
-          <td className="px-3 py-2 border-r border-slate-50">{trip.contractor}</td>
-          <td className="px-3 py-2 border-r border-slate-50">{trip.loadType}</td>
-          <td className="px-3 py-2 border-r border-slate-50 font-bold">{trip.netWeight}</td>
-          <td className="px-3 py-2 border-r border-slate-50">₹{trip.rate}</td>
-          <td className="px-3 py-2 border-r border-slate-50 font-bold text-blue-700 bg-blue-50/50">₹{tripTotal.toLocaleString()}</td>
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-orange-600 font-semibold">₹{trip.advance}</td>
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-slate-600">₹{trip.weighbridgeCharge}</td>
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-600 font-bold">₹{Number(trip.expense || 0).toLocaleString()}</td>
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-500 font-bold">₹{Number(trip.loadingCharge || 0).toLocaleString()}</td>
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-500 font-bold">₹{Number(trip.unloadingCharge || 0).toLocaleString()}</td>
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-green-600 font-bold bg-green-50/30">₹{drPay.toLocaleString()}</td>
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-slate-600">{trip.dieselLiters} L</td>
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-orange-600">₹{trip.dieselPrice}</td>
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-600 font-bold bg-red-50/30">₹{tripExpense.toLocaleString()}</td>
-          <td className={`px-3 py-2 text-right font-extrabold ${tripProfit >= 0 ? 'text-emerald-600 bg-emerald-50/50' : 'text-red-600 bg-red-50/50'}`}>₹{tripProfit.toLocaleString()}</td>
-          <td className="px-2 py-3 text-center no-print">
-            <button onClick={() => handleDeleteTrip(trip.id)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-all">
-              <Trash2 size={14}/>
-            </button>
-          </td>
-        </tr>
-      );
-    })
-  )}
-</tbody>
+                    return (
+                      <tr key={trip.id} className="hover:bg-blue-50 transition-colors">
+                        <td className="px-3 py-2 border-r border-slate-50">{trip.date}</td>
+                        <td className="px-3 py-2 border-r border-slate-50 font-mono text-slate-500">{trip.billNo}</td>
+                        <td className="px-3 py-2 border-r border-slate-50 font-bold text-slate-700">{trip.regNumber}</td>
+                        <td className="px-3 py-2 border-r border-slate-50">{trip.driverName}</td>
+                        <td className="px-3 py-2 border-r border-slate-50">{trip.from} - {trip.to}</td>
+                        <td className="px-3 py-2 border-r border-slate-50">{trip.contractor}</td>
+                        <td className="px-3 py-2 border-r border-slate-50">{trip.loadType}</td>
+                        <td className="px-3 py-2 border-r border-slate-50 font-bold">{trip.netWeight}</td>
+                        <td className="px-3 py-2 border-r border-slate-50 bg-indigo-50/20 font-mono text-indigo-700">{trip.kilometers || '-'}</td>
+                        <td className="px-3 py-2 border-r border-slate-50">₹{trip.rate}</td>
+                        <td className="px-3 py-2 border-r border-slate-50 font-bold text-blue-700 bg-blue-50/50">₹{tripTotal.toLocaleString()}</td>
+                        <td className="px-3 py-2 border-r border-slate-50 text-right text-orange-600 font-semibold">₹{trip.advance}</td>
+                        <td className="px-3 py-2 border-r border-slate-50 text-right text-slate-600">₹{trip.weighbridgeCharge}</td>
+                        <td className="px-3 py-2 border-r border-slate-50 text-right text-red-500">{(Number(trip.loadingCharge)||0) + (Number(trip.unloadingCharge)||0)}</td>
+                        <td className="px-3 py-2 border-r border-slate-50 text-right text-green-600 font-bold bg-green-50/30">₹{drPay.toLocaleString()}</td>
+                        <td className="px-3 py-2 border-r border-slate-50 text-right text-slate-600">{trip.dieselLiters} L</td>
+                        <td className="px-3 py-2 border-r border-slate-50 text-right text-orange-600">₹{trip.dieselPrice}</td>
+                        <td className="px-3 py-2 border-r border-slate-50 text-right text-red-600 font-bold bg-red-50/30">₹{tripExpense.toLocaleString()}</td>
+                        <td className={`px-3 py-2 text-right font-extrabold ${tripProfit >= 0 ? 'text-emerald-600 bg-emerald-50/50' : 'text-red-600 bg-red-50/50'}`}>₹{tripProfit.toLocaleString()}</td>
+                        <td className="px-2 py-3 text-center no-print">
+                            <button onClick={() => handleDeleteTrip(trip.id)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-all"><Trash2 size={14}/></button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
             </table>
             </div>
         </div>
@@ -1915,116 +1787,7 @@ const totalExpenses = Math.round(
   );
 };
 
-const HistoryView = ({ historyLogs, setHistoryLogs, setTrips, setDrivers, drivers }: any) => {
-  const driversGlobal = drivers;
-// In HistoryView component, update the handleRetrieveSettlement function:
-const handleRetrieveSettlement = async (log: WeeklyHistory) => {
-  if (!confirm(`Retrieve trips for ${log.driverName}? \nThis will restore trips and update wallet.`)) return;
-
-  try {
-    const tripIds = log.trips.map((t: any) => t.id).filter(Boolean);
-
-    if (tripIds.length === 0) {
-      alert("No trips found in settlement snapshot.");
-      return;
-    }
-
-    // CORRECT WALLET INCREMENT CALCULATION
-    let walletIncrement = 0;
-
-    log.trips.forEach((trip: any) => {
-      const drPay = Number(trip.driver_trip_pay || trip.driverTripPay || 0);
-      const advance = Number(trip.advance || 0);
-      
-      // CORRECT EXPENSE CALCULATION
-      const load = Number(trip.loading_charge || trip.loadingCharge || 0);
-      const unload = Number(trip.unloading_charge || trip.unloadingCharge || 0);
-      const weigh = Number(trip.weighbridge_charge || trip.weighbridgeCharge || 0);
-      const extra = Number(trip.expense || 0);
-      
-      const totalExpense = load + unload + weigh + extra; // ADDED EXTRA EXPENSE
-      
-      // CORRECT NET CALCULATION: Driver Pay - (Advance + Total Expenses)
-      const net = drPay - (advance + totalExpense);
-      walletIncrement += net;
-    });
-
-    // Update trips in Supabase
-    const { error: tripRestoreError } = await supabase
-      .from("trips")
-      .update({ status: "active" })
-      .in("id", tripIds);
-
-    if (tripRestoreError) throw tripRestoreError;
-
-    const driverName = log.driverName;
-    if (!driverName) {
-      alert("Driver name not available in this settlement.");
-      return;
-    }
-
-    const driver = driversGlobal.find((d: any) => d.name === driverName);
-    if (!driver) {
-      alert("Driver not found in current driver list.");
-      return;
-    }
-
-    // Increment wallet with CORRECT amount
-    const { error: walletError } = await supabase.rpc("increment_wallet", {
-      row_id: driver.id,
-      amount: walletIncrement,
-    });
-
-    if (walletError) throw walletError;
-
-    // Update state
-    setTrips((prev: any[]) => [
-      ...log.trips.map((t: any) => ({
-        id: t.id,
-        date: t.date,
-        billNo: t.bill_no || t.billNo,
-        regNumber: t.vehicle_reg || t.regNumber,
-        driverName: driverName,
-        from: t.from_loc || t.from,
-        to: t.to_loc || t.to,
-        contractor: t.contractor,
-        loadType: t.load_type || t.loadType,
-        netWeight: t.net_weight || t.netWeight,
-        expense: t.expense || 0, // ADDED EXTRA EXPENSE
-        rate: t.rate,
-        tripTotal: t.trip_total || t.tripTotal,
-        driverTripPay: t.driver_trip_pay || t.driverTripPay,
-        advance: t.advance,
-        dieselPrice: t.diesel_price || t.dieselPrice,
-        dieselLiters: t.diesel_liters || t.dieselLiters,
-        loadingCharge: t.loading_charge || t.loadingCharge,
-        unloadingCharge: t.unloading_charge || t.unloadingCharge,
-        weighbridgeCharge: t.weighbridge_charge || t.weighbridgeCharge,
-        commissionType: t.commission_type || "percentage",
-        commissionValue: t.commission_value || "15",
-        fuelPaidDate: t.fuel_paid_date || "",
-        contractorPaidDate: t.contractor_paid_date || "",
-        creditedAmount: t.credited_amount || 0,
-      })),
-      ...prev,
-    ]);
-
-    setDrivers((prev: any[]) =>
-      prev.map((d: any) =>
-        d.id === driver.id ? { ...d, walletBalance: d.walletBalance + walletIncrement } : d
-      )
-    );
-
-    setHistoryLogs((prev: any[]) => prev.filter((h: any) => h.id !== log.id));
-
-    await supabase.from("settlements").delete().eq("id", log.id);
-
-    alert("✅ Retrieved successfully and wallet updated!");
-  } catch (err: any) {
-    alert("❌ Retrieve failed: " + err.message);
-  }
-};
-
+const HistoryView = ({ historyLogs }: { historyLogs: WeeklyHistory[] }) => {
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   return (
@@ -2035,8 +1798,7 @@ const handleRetrieveSettlement = async (log: WeeklyHistory) => {
         {historyLogs.length === 0 ? (
           <div className="text-center text-slate-400 py-10">No history available yet.</div>
         ) : (
-          historyLogs.map((log: WeeklyHistory) => (
-
+          historyLogs.map((log) => (
             <div key={log.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               {/* --- HEADER: DISPLAYS ONLY DRIVER NAME --- */}
               <div 
@@ -2060,7 +1822,6 @@ const handleRetrieveSettlement = async (log: WeeklyHistory) => {
 
               {/* --- EXPANDED SECTION --- */}
               {expandedId === log.id && (
-                
                 <div className="border-t border-slate-100 bg-slate-50/50 p-6 animate-in slide-in-from-top-2">
                   
                   {/* 1. Settlement Summary Box */}
@@ -2080,18 +1841,6 @@ const handleRetrieveSettlement = async (log: WeeklyHistory) => {
                          <div className="text-slate-800 font-bold">{log.trips.length} Records</div>
                       </div>
                    </div>
-
-
-                   <div className="flex justify-end mb-4">
-  <button
-   onClick={() => handleRetrieveSettlement(log)}
-
-    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow flex items-center gap-2"
-  >
-    <RefreshCw size={16}/> Retrieve
-  </button>
-</div>
-
 
                    <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
                     <Truck size={16}/> Trip Details
@@ -2214,6 +1963,7 @@ const ModalWrapper = ({ title, children, onClose, headerContent }: any) => (
         <div className="flex items-center gap-3">
             {headerContent}
             <button onClick={onClose}><X size={20} className="text-slate-400 hover:text-red-500"/></button>
+        
         </div>
       </div>
       <div className="p-5 overflow-y-auto">
@@ -2251,41 +2001,27 @@ const DriverDetailsModal = ({ driver, setDrivers, setHistoryLogs, onClose, curre
   const [payAmount, setPayAmount] = useState<string>(''); 
   const [localWalletBalance, setLocalWalletBalance] = useState<number>(Math.round(Number(driver.walletBalance)) || 0);
 
-  // --- 1. FETCH DATA & CALCULATE NET ---
+  // --- 1. FETCH DATA & CALCULATE NET (ROUNDED) ---
   useEffect(() => {
     const fetchHistory = async () => {
       if (!driver?.id) return;
       const { data } = await supabase.from('trips').select('*').eq('driver_id', driver.id).eq('status', 'active').order('date', { ascending: true });
         
       if(data) {
-const mapped = data.map((t: any) => {
-  const extraExpense = Math.round(Number(t.expense) || 0);
-  const loadingCharge = Math.round(Number(t.loading_charge) || 0);
-  const unloadingCharge = Math.round(Number(t.unloading_charge) || 0);
-  const weighbridgeCharge = Math.round(Number(t.weighbridge_charge) || 0);
-  
-  const totalExpenses = Math.round(loadingCharge + unloadingCharge + weighbridgeCharge + extraExpense);
-  const advance = Math.round(Number(t.advance) || 0);
-  const driverPay = Math.round(Number(t.driver_trip_pay) || 0);
-  
-  // NEW FORMULA: Advance - Total Expenses - Gross Pay
-  const calculatedNet = Math.round(driverPay - (advance - totalExpenses));
+        const mapped = data.map((t:any) => {
+          // Calculate Expenses (Rounded)
+          const expenses = Math.round((Number(t.loading_charge) || 0) + (Number(t.unloading_charge) || 0) + (Number(t.weighbridge_charge) || 0));
+          const advance = Math.round(Number(t.advance) || 0);
+          const driverPay = Math.round(Number(t.driver_trip_pay) || 0);
+
+          // Formula with Rounding
+          const calculatedNet = Math.round(driverPay - (advance - expenses));
 
           return {
             ...t,
-            date: t.date, 
-            billNo: t.bill_no, 
-            from: t.from_loc, 
-            to: t.to_loc, 
-            loadType: t.load_type, 
-            tripTotal: t.trip_total,
-            loadingCharge, 
-            unloadingCharge, 
-            driverTripPay: driverPay,
-            weighbridgeCharge, 
-            advance,
-            extraExpense, 
-            totalExpenses,
+            date: t.date, billNo: t.bill_no, from: t.from_loc, to: t.to_loc, loadType: t.load_type, tripTotal: t.trip_total,
+            loadingCharge: t.loading_charge, unloadingCharge: t.unloading_charge, driverTripPay: t.driver_trip_pay,
+            weighbridgeCharge: t.weighbridge_charge, advance: t.advance,
             netAmount: calculatedNet 
           };
         });
@@ -2305,26 +2041,14 @@ const mapped = data.map((t: any) => {
     return tripDate >= start && tripDate <= end;
   });
 
-  // --- 3. VISUAL TOTALS ---
+  // --- 3. VISUAL TOTALS (ROUNDED) ---
   const totalGrossPay = Math.round(filteredHistory.reduce((sum, t) => sum + (Number(t.driverTripPay) || 0), 0));
   const totalAdvance = Math.round(filteredHistory.reduce((sum, t) => sum + (Number(t.advance) || 0), 0));
-  const totalExtraExpense = Math.round(filteredHistory.reduce((sum, t) => sum + (Number(t.extraExpense) || 0), 0));
-  const totalLoadingCharge = Math.round(filteredHistory.reduce((sum, t) => sum + (Number(t.loadingCharge) || 0), 0));
-  const totalUnloadingCharge = Math.round(filteredHistory.reduce((sum, t) => sum + (Number(t.unloadingCharge) || 0), 0));
-  const totalWeighbridgeCharge = Math.round(filteredHistory.reduce((sum, t) => sum + (Number(t.weighbridgeCharge) || 0), 0));
-  const totalExpenses = Math.round(totalExtraExpense + totalLoadingCharge + totalUnloadingCharge + totalWeighbridgeCharge);
+  const totalExpenses = Math.round(filteredHistory.reduce((sum, t) => sum + (Number(t.loadingCharge)||0) + (Number(t.unloadingCharge)||0) + (Number(t.weighbridgeCharge)||0), 0));
 
-  // --- 4. DYNAMIC BALANCE ---
-  // --- 4. DYNAMIC BALANCE ---
-// Change this line:
-// Inside DriverDetailsModal component body
-const selectedTripsSum = Math.round(filteredHistory
-  .filter(t => selectedTripIds.size === 0 || selectedTripIds.has(t.id))
-  .reduce((sum, t) => sum + t.netAmount, 0) 
-);
-
-// This is the value displayed at the very top
-const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
+  // --- 4. DYNAMIC BALANCE (ROUNDED) ---
+  const selectedTripsSum = Math.round(filteredHistory.filter(t => selectedTripIds.size === 0 || selectedTripIds.has(t.id)).reduce((sum, t) => sum + t.netAmount, 0));
+  const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
 
   // --- 5. HANDLERS ---
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2354,10 +2078,8 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
   };
 
   const toggleSelectAll = () => {
-    if (selectedTripIds.size === filteredHistory.length) { 
-      setSelectedTripIds(new Set()); 
-      setPayAmount(localWalletBalance.toFixed(0)); 
-    } else {
+    if (selectedTripIds.size === filteredHistory.length) { setSelectedTripIds(new Set()); setPayAmount(localWalletBalance.toFixed(0)); } 
+    else {
       const allIds = new Set(filteredHistory.map(t => t.id));
       setSelectedTripIds(allIds);
       const allNet = Math.round(filteredHistory.reduce((sum, t) => sum + t.netAmount, 0));
@@ -2378,14 +2100,8 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
   const handleSettle = async () => {
     if (submitting) return;
     const tripsToSettle = filteredHistory.filter(t => selectedTripIds.has(t.id));
-    
-    // UPDATE THIS LINE HERE:
-    const tripNetSum = Math.round(tripsToSettle.reduce((sum, t) => 
-        sum + (t.driverTripPay - (t.advance - t.totalExpenses)), 0)
-    );
-    
+    const tripNetSum = Math.round(tripsToSettle.reduce((sum, t) => sum + t.netAmount, 0));
     const totalDue = Math.round(localWalletBalance + tripNetSum);
-    // ... rest of the function remains the same
     const paid = Math.round(parseFloat(payAmount) || 0);
     const newBalance = Math.round(totalDue - paid);
 
@@ -2395,66 +2111,38 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
     const today = new Date().toISOString().split('T')[0];
     try {
         const { data: newSettlement, error } = await supabase.from('settlements').insert([{ 
-            driver_id: driver.id, 
-            settlement_date: today, 
-            amount_paid: paid, 
-            trips_snapshot: tripsToSettle, 
+            driver_id: driver.id, settlement_date: today, amount_paid: paid, trips_snapshot: tripsToSettle, 
             notes: `Total: ${totalDue}, Paid: ${paid}, Bal: ${newBalance}`,
-            user_id: currentUser.id
+            user_id: currentUser.id // ADDED USER ID
         }]).select().single();
 
         if (error) throw error;
-        
         await supabase.from('drivers').update({ wallet_balance: newBalance }).eq('id', driver.id);
-        
-        if (selectedTripIds.size > 0) { 
-            await supabase.from('trips').update({ status: 'settled' }).in('id', Array.from(selectedTripIds)); 
-        }
-        
-        if (setDrivers) { 
-            setDrivers((prev: any[]) => prev.map(d => d.id === driver.id ? { ...d, walletBalance: newBalance } : d)); 
-        }
-        
+        if (selectedTripIds.size > 0) { await supabase.from('trips').update({ status: 'settled' }).in('id', Array.from(selectedTripIds)); }
+        if (setDrivers) { setDrivers((prev: any[]) => prev.map(d => d.id === driver.id ? { ...d, walletBalance: newBalance } : d)); }
         if (setHistoryLogs && newSettlement) {
-            setHistoryLogs((prev: any[]) => [{ 
-                id: newSettlement.id, 
-                settlementDate: newSettlement.settlement_date, 
-                driverName: driver.name, 
-                totalIncome: 0, 
-                totalExpense: newSettlement.amount_paid, 
-                netProfit: 0, 
-                transactions: [], 
-                trips: newSettlement.trips_snapshot || [] 
-            }, ...prev]);
+            setHistoryLogs((prev: any[]) => [{ id: newSettlement.id, settlementDate: newSettlement.settlement_date, driverName: driver.name, totalIncome: 0, totalExpense: newSettlement.amount_paid, netProfit: 0, transactions: [], trips: newSettlement.trips_snapshot || [] }, ...prev]);
         }
-        
         setLocalWalletBalance(newBalance);
         setDriverHistory(prev => prev.filter(t => !selectedTripIds.has(t.id)));
         setSelectedTripIds(new Set());
         setPayAmount(''); 
         alert("Settled!");
-    } catch (err: any) { 
-        alert("Error: " + err.message); 
-    } finally { 
-        setSubmitting(false); 
-    }
+    } catch (err: any) { alert("Error: " + err.message); } finally { setSubmitting(false); }
   };
 
   const handleDownloadExcel = () => {
     if (filteredHistory.length === 0) { alert("No data"); return; }
-    const headers = ["Date", "Bill No", "Route", "Total Rent", "Advance", "Extra Exp", "Loading", "Unloading", "Weighbridge", "Total Exp", "Dr Pay", "Net Added"];
+    const headers = ["Date", "Bill No", "Route", "Total Rent", "Advance", "Expenses", "Driver Pay", "Net Added"];
     const csvRows = [headers.join(','), ...filteredHistory.map(h => {
-        return [h.date, h.billNo, `"${h.from}-${h.to}"`, h.tripTotal, h.advance, h.extraExpense, h.loadingCharge, h.unloadingCharge, h.weighbridgeCharge, h.totalExpenses, h.driverTripPay, h.netAmount].join(',');
+        const exp = Math.round((Number(h.loadingCharge)||0)+(Number(h.unloadingCharge)||0)+(Number(h.weighbridgeCharge)||0));
+        return [h.date, h.billNo, `"${h.from}-${h.to}"`, h.tripTotal, h.advance, exp, h.driverTripPay, h.netAmount].join(',');
     })];
     const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.setAttribute('hidden', ''); 
-    a.setAttribute('href', url); 
-    a.setAttribute('download', `${driver.name}_Statement.csv`);
-    document.body.appendChild(a); 
-    a.click(); 
-    document.body.removeChild(a);
+    a.setAttribute('hidden', ''); a.setAttribute('href', url); a.setAttribute('download', `${driver.name}_Statement.csv`);
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
   return (
@@ -2462,198 +2150,130 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
       <div className="bg-white w-full max-w-6xl h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
         <div className="bg-white border-b border-slate-200 p-4 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0">
             <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xl shadow">
-                  {driver.name.charAt(0)}
-                </div>
+                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xl shadow">{driver.name.charAt(0)}</div>
                 <div>
                     <h2 className="text-xl font-bold text-slate-800">{driver.name}</h2>
                     <div className="text-xs text-slate-500 font-mono flex items-center gap-2">
-                        Total Balance: <span className={calculatedNetAdded >= 0 ? "text-green-600" : "text-red-600"}>
-                          ₹{calculatedNetAdded.toLocaleString()}
-                        </span>
-                        {localWalletBalance !== 0 && (
-                          <button 
-                            onClick={handleResetWallet} 
-                            className="bg-slate-100 hover:bg-red-100 text-slate-500 hover:text-red-600 p-1 rounded transition-colors" 
-                            title="Reset Wallet"
-                          >
-                            <RefreshCw size={10}/>
-                          </button>
-                        )}
+                        Total Balance: <span className={calculatedNetAdded >= 0 ? "text-green-600" : "text-red-600"}>₹{calculatedNetAdded.toLocaleString()}</span>
+                        {localWalletBalance !== 0 && (<button onClick={handleResetWallet} className="bg-slate-100 hover:bg-red-100 text-slate-500 hover:text-red-600 p-1 rounded transition-colors" title="Reset Wallet"><RefreshCw size={10}/></button>)}
                     </div>
                 </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 justify-end">
                 <div className="flex gap-1">
-                    <input 
-                      type="date" 
-                      className="border rounded px-2 py-1 text-xs text-slate-600" 
-                      value={startDate} 
-                      onChange={e=>setStartDate(e.target.value)} 
-                      disabled={submitting}
-                    />
-                    <input 
-                      type="date" 
-                      className="border rounded px-2 py-1 text-xs text-slate-600" 
-                      value={endDate} 
-                      onChange={e=>setEndDate(e.target.value)} 
-                      disabled={submitting}
-                    />
+                    <input type="date" className="border rounded px-2 py-1 text-xs text-slate-600" value={startDate} onChange={e=>setStartDate(e.target.value)} disabled={submitting}/>
+                    <input type="date" className="border rounded px-2 py-1 text-xs text-slate-600" value={endDate} onChange={e=>setEndDate(e.target.value)} disabled={submitting}/>
                 </div>
                 <div className={`flex items-end gap-2 ml-2 ${submitting ? 'opacity-50 pointer-events-none' : ''}`}>
                     <div>
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase leading-none mb-1">
-                          Pay / Settle Amt
-                        </label>
-                        <input 
-                          type="number" 
-                          placeholder="Type to auto-select..." 
-                          className="w-48 bg-white border border-slate-300 rounded px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm" 
-                          value={payAmount} 
-                          onChange={handleAmountChange} 
-                          disabled={submitting} 
-                        />
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase leading-none mb-1">Pay / Settle Amt</label>
+                        <input type="number" placeholder="Type to auto-select..." className="w-48 bg-white border border-slate-300 rounded px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm" value={payAmount} onChange={handleAmountChange} disabled={submitting} />
                     </div>
-                    <button 
-                      onClick={handleSettle} 
-                      disabled={submitting || (!payAmount && selectedTripIds.size === 0)} 
-                      className="h-[38px] flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 text-white px-4 rounded-md font-bold text-sm shadow-sm transition-all"
-                    >
-                      {submitting ? <TrendingUp size={16} className="animate-spin"/> : <CheckCircle2 size={18}/>} 
-                      Settle Selected
-                    </button>
+                    <button onClick={handleSettle} disabled={submitting || (!payAmount && selectedTripIds.size === 0)} className="h-[38px] flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 text-white px-4 rounded-md font-bold text-sm shadow-sm transition-all">{submitting ? <TrendingUp size={16} className="animate-spin"/> : <CheckCircle2 size={18}/>} Settle Selected</button>
                 </div>
                 <div className="flex gap-1 ml-4 border-l pl-4">
-                    <button 
-                      onClick={handleDownloadExcel} 
-                      className="p-2 bg-slate-100 hover:bg-green-100 text-slate-600 rounded-lg border border-slate-200"
-                    >
-                      <Download size={18}/>
-                    </button>
-                    <button 
-                      onClick={() => printSection('driver-print-area', `${driver.name} Statement`)} 
-                      className="p-2 bg-slate-100 hover:bg-blue-100 text-slate-600 rounded-lg border border-slate-200"
-                    >
-                      <Printer size={18}/>
-                    </button>
-                    <button 
-                      onClick={onClose} 
-                      disabled={submitting} 
-                      className="p-2 bg-red-50 hover:bg-red-100 text-red-400 rounded-lg ml-2"
-                    >
-                      <X size={18} />
-                    </button>
+                    <button onClick={handleDownloadExcel} className="p-2 bg-slate-100 hover:bg-green-100 text-slate-600 rounded-lg border border-slate-200"><Download size={18}/></button>
+                    <button onClick={() => printSection('driver-print-area', `${driver.name} Statement`)} className="p-2 bg-slate-100 hover:bg-blue-100 text-slate-600 rounded-lg border border-slate-200"><Printer size={18}/></button>
+                    <button onClick={onClose} disabled={submitting} className="p-2 bg-red-50 hover:bg-red-100 text-red-400 rounded-lg ml-2"><X size={18} /></button>
                 </div>
             </div>
         </div>
 
         <div id="driver-print-area" className="flex-1 overflow-auto bg-slate-50/50 p-6">
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-    {/* 1. Total Advances */}
-    <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-        <div className="text-xs font-bold text-slate-400 uppercase">Total Advances</div>
-        <div className="text-xl font-bold text-orange-600">₹ {totalAdvance.toLocaleString()}</div>
-    </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                    <div className="text-xs font-bold text-slate-400 uppercase">Gross Pay</div>
+                    <div className="text-xl font-bold text-slate-800">₹ {totalGrossPay.toLocaleString()}</div>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                    <div className="text-xs font-bold text-slate-400 uppercase">Total Advances</div>
+                    <div className="text-xl font-bold text-orange-600">₹ {totalAdvance.toLocaleString()}</div>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                    <div className="text-xs font-bold text-slate-400 uppercase">Total Expenses</div>
+                    <div className="text-xl font-bold text-red-600">₹ {totalExpenses.toLocaleString()}</div>
+                    <div className="text-[9px] text-slate-400 mt-1 font-medium leading-tight">Load+Unload+Weighbridge</div>
+                </div>
+                <div className="bg-white p-4 rounded-xl border-l-4 border-l-indigo-600 shadow-md transition-all">
+                    <div className="flex justify-between items-start">
+                        <div className="text-xs font-bold text-slate-400 uppercase">Net Added (Remaining)</div>
+                        <TrendingUp size={16} className="text-indigo-600"/>
+                    </div>
+                    <div className={`text-2xl font-bold ${calculatedNetAdded >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>₹ {calculatedNetAdded.toLocaleString()}</div>
+                    <div className="text-[10px] text-slate-500 mt-1 font-mono bg-slate-100 inline-block px-2 py-0.5 rounded">(Wallet: {localWalletBalance.toLocaleString()} + Trips: {selectedTripsSum.toLocaleString()})</div>
+                </div>
+            </div>
 
-    {/* 2. L/U/W Sum */}
-    <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-        <div className="text-xs font-bold text-slate-400 uppercase">L/U/W Sum</div>
-        <div className="text-xl font-bold text-red-600">₹ {(totalLoadingCharge + totalUnloadingCharge + totalWeighbridgeCharge).toLocaleString()}</div>
-    </div>
-
-    {/* 3. Extra Exp */}
-    <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-        <div className="text-xs font-bold text-slate-400 uppercase">Extra Exp</div>
-        <div className="text-xl font-bold text-red-600">₹ {totalExtraExpense.toLocaleString()}</div>
-    </div>
-
-    {/* 4. Gross Pay */}
-    <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-        <div className="text-xs font-bold text-slate-400 uppercase">Gross Pay</div>
-        <div className="text-xl font-bold text-slate-800">₹ {totalGrossPay.toLocaleString()}</div>
-    </div>
-
-    {/* 5. Net Added (Result of New Formula) */}
-    {/* 5. Net Added (Result of New Formula) */}
-<div className="bg-white p-4 rounded-xl border-l-4 border-l-indigo-600 shadow-md">
-    <div className="text-xs font-bold text-slate-400 uppercase">Net Added</div>
-    <div className={`text-2xl font-bold ${selectedTripsSum >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-      ₹ {selectedTripsSum.toLocaleString()}
-    </div>
-</div>
-</div>
-
- {/* --- UPDATED TABLE IN DRIVER DETAILS MODAL --- */}
-{/* --- UPDATED TABLE IN DRIVER DETAILS MODAL --- */}
-{/* --- UPDATED TABLE IN DRIVER DETAILS MODAL --- */}
-{/* --- UPDATED TABLE IN DRIVER DETAILS MODAL --- */}
-{/* --- UPDATED TABLE IN DRIVER DETAILS MODAL --- */}
-<div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${submitting ? 'opacity-60 pointer-events-none select-none' : ''}`}>
-    <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left">
-            <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px] whitespace-nowrap">
-                <tr>
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Load</th>
-                    <th className="px-4 py-3 text-right text-orange-400">Advance</th>
-                    <th className="px-4 py-3 text-center">W / L / U / E Details</th>
-                    <th className="px-4 py-3 text-right text-green-400">Dr Pay</th>
-                    <th className="px-4 py-3 text-right text-red-400">Total Exp</th>
-                    <th className="px-4 py-3 text-right text-white bg-slate-700">Net Added</th>
-                </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-[11px] font-medium">
-                {loading ? (
-                    <tr><td colSpan={7} className="p-8 text-center text-slate-400">Loading History...</td></tr>
-                ) : filteredHistory.length === 0 ? (
-                    <tr><td colSpan={7} className="p-8 text-center text-slate-400">No active trips found.</td></tr>
-                ) : filteredHistory.map((h, index) => {
+            <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${submitting ? 'opacity-60 pointer-events-none select-none' : ''}`}>
+    <table className="w-full text-sm text-left">
+        <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px]">
+            <tr>
+                <th className="px-4 py-3 w-12 text-center">
+                    <button onClick={toggleSelectAll} className="hover:text-white transition-colors">
+                        {selectedTripIds.size > 0 && selectedTripIds.size === filteredHistory.length ? <CheckSquare size={16}/> : <Square size={16}/>}
+                    </button>
+                </th>
+                <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3">Route / Load</th>
+                <th className="px-4 py-3 text-right">Net Weight</th> {/* New Column */}
+                <th className="px-4 py-3 text-right text-orange-400">Advance</th>
+                <th className="px-4 py-3 text-right text-red-400">Weighbridge</th> {/* New Column */}
+                <th className="px-4 py-3 text-right text-red-400">Labor Exp</th>
+                <th className="px-4 py-3 text-right text-green-400">Dr Pay</th>
+                <th className="px-4 py-3 text-right text-white bg-slate-700">Net Added</th>
+            </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100 text-xs font-medium">
+            {loading ? (
+                <tr><td colSpan={9} className="p-8 text-center text-slate-400">Loading...</td></tr>
+            ) : filteredHistory.length === 0 ? (
+                <tr><td colSpan={9} className="p-8 text-center text-slate-400">No active trips.</td></tr>
+            ) : (
+                filteredHistory.map((h) => {
                     const isSelected = selectedTripIds.has(h.id);
-                    const netAddedValue = h.netAmount; 
-
+                    // Separating expenses for the new column layout
+                    const laborExp = Math.round((Number(h.loadingCharge) || 0) + (Number(h.unloadingCharge) || 0));
+                    const weighbridge = Math.round(Number(h.weighbridgeCharge) || 0);
+                    
                     return (
-                        <tr 
-                            key={`${h.id}-${index}`} 
-                            onClick={() => !submitting && handleToggleRow(h.id)} 
-                            className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-slate-50'}`}
-                        >
-                            <td className="px-4 py-3 font-bold text-slate-700">
-                                {h.date}
-                            </td>
-                            <td className="px-4 py-3">
-                                <div className="font-bold">{h.loadType}</div>
-                                <div className="text-slate-400">{h.netWeight}T</div>
-                            </td>
-                            <td className="px-4 py-3 text-right text-orange-600 font-bold">
-                                ₹{h.advance.toLocaleString()}
-                            </td>
-                            <td className="px-4 py-3 text-center bg-slate-50/50">
-                                <div className="flex flex-col items-center">
-                                    <div className="font-mono text-slate-700">
-                                        {h.weighbridgeCharge}/{h.loadingCharge}/{h.unloadingCharge}/<span className="text-red-500 font-bold">{h.extraExpense}</span>
-                                    </div>
-                                    <div className="text-[8px] text-slate-400 uppercase tracking-widest font-bold mt-0.5">
-                                        W / L / U / E
-                                    </div>
+                        <tr key={h.id} onClick={() => !submitting && handleToggleRow(h.id)} className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-slate-50'}`}>
+                            <td className="px-4 py-3 text-center">
+                                <div className={`flex justify-center ${isSelected ? 'text-indigo-600' : 'text-slate-300'}`}>
+                                    {isSelected ? <CheckSquare size={16}/> : <Square size={16}/>}
                                 </div>
                             </td>
+                            <td className="px-4 py-3 font-bold text-slate-700">
+                                {h.date}<br/>
+                                <span className="text-slate-400 font-normal">{h.billNo}</span>
+                            </td>
+                            <td className="px-4 py-3">
+                                <span className="font-bold">{h.loadType}</span><br/>
+                                <span className="text-blue-600 font-semibold">➔ {h.to}</span> {/* Destination added here */}
+                            </td>
+                            <td className="px-4 py-3 text-right font-bold text-slate-700">
+                                {h.net_weight || h.netWeight} T
+                            </td>
+                            <td className="px-4 py-3 text-right text-orange-600 font-bold">
+                                ₹{h.advance}
+                            </td>
+                            <td className="px-4 py-3 text-right text-red-500">
+                                ₹{weighbridge}
+                            </td>
+                            <td className="px-4 py-3 text-right text-red-500">
+                                ₹{laborExp}
+                            </td>
                             <td className="px-4 py-3 text-right text-green-600 font-bold">
-                                ₹{h.driverTripPay.toLocaleString()}
+                                ₹{h.driverTripPay}
                             </td>
-                            <td className="px-4 py-3 text-right text-red-600 font-bold bg-red-50/30">
-                                ₹{h.totalExpenses.toLocaleString()}
-                            </td>
-                            <td className={`px-4 py-3 text-right font-bold border-l border-slate-100 ${
-                                netAddedValue >= 0 ? 'text-emerald-600 bg-emerald-50/10' : 'text-red-600 bg-red-50/10'
-                            }`}>
-                                ₹{netAddedValue.toLocaleString()}
+                            <td className={`px-4 py-3 text-right font-extrabold ${h.netAmount >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
+                                ₹{h.netAmount}
                             </td>
                         </tr>
                     );
-                })}
-            </tbody>
-        </table>
-    </div>
+                })
+            )}
+        </tbody>
+    </table>
 </div>
         </div>
       </div>
@@ -2662,40 +2282,7 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
 };
 
 interface InputProps { label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; placeholder?: string; type?: string; uppercase?: boolean; required?: boolean; error?: boolean; }
-const Input = ({
-  label,
-  value,
-  onChange,
-  placeholder,
-  type = "text",
-  uppercase,
-  required,
-  error,
-}: InputProps) => (
-  <div>
-    <label
-      className={`text-xs font-bold uppercase mb-1 block ${
-        error ? "text-red-500" : "text-slate-500"
-      }`}
-    >
-      {label}
-    </label>
-
-    <input
-      type={type}
-      required={required}
-      placeholder={placeholder}
-      value={value ?? ""}  
-      onChange={onChange}
-      className={`w-full border p-2.5 rounded-lg text-sm outline-none transition-all ${
-        error
-          ? "border-red-500 bg-red-50"
-          : "border-slate-300 focus:ring-2 focus:ring-blue-500"
-      } ${uppercase ? "uppercase" : ""}`}
-    />
-  </div>
-);
-
+const Input = ({ label, value, onChange, placeholder, type="text", uppercase, required, error }: InputProps) => (<div><label className={`text-xs font-bold uppercase mb-1 block ${error ? 'text-red-500' : 'text-slate-500'}`}>{label}</label><input type={type} required={required} placeholder={placeholder} value={value} onChange={onChange} className={`w-full border p-2.5 rounded-lg text-sm outline-none transition-all ${error ? 'border-red-500 bg-red-50' : 'border-slate-300 focus:ring-2 focus:ring-blue-500'} ${uppercase ? 'uppercase' : ''}`} /></div>);
 const ActionButton = ({ icon, label, color, onClick }: any) => <button onClick={onClick} className="flex flex-col items-center justify-center py-3 hover:bg-white active:bg-slate-100 transition-colors group"><div className={`${color} mb-1 transition-transform group-hover:scale-110`}>{icon}</div><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide group-hover:text-slate-700">{label}</span></button>;
 const SidebarItem = ({ icon, label, active, onClick }: any) => <button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${active ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>{icon} {label}</button>;
 const MobileNavItem = ({ icon, label, active, onClick }: any) => <button onClick={onClick} className={`flex flex-col items-center justify-center w-16 transition-colors ${active ? 'text-blue-600' : 'text-slate-400'}`}><div className={`mb-1 ${active ? 'scale-110' : ''} transition-transform`}>{icon}</div><span className="text-[10px] font-bold">{label}</span></button>;
