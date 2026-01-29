@@ -228,7 +228,7 @@ const printSection = (elementId: string, title: string) => {
   const content = document.getElementById(elementId)?.innerHTML;
   if (!content) return;
 
-  const printWindow = window.open('', '', 'width=1000,height=800');
+  const printWindow = window.open('', '', 'width=1200,height=800');
   if (printWindow) {
     printWindow.document.write(`
       <html>
@@ -236,39 +236,61 @@ const printSection = (elementId: string, title: string) => {
           <title>${title}</title>
           <script src="https://cdn.tailwindcss.com"></script>
           <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+            
             @media print {
-              body { font-family: 'Inter', sans-serif; padding: 10px; color: #000; }
+              @page { size: landscape; margin: 8mm; }
+              body { 
+                font-family: 'Inter', sans-serif;
+                background: white !important; 
+                padding: 0; 
+                margin: 0; 
+                -webkit-print-color-adjust: exact !important; 
+                print-color-adjust: exact !important; 
+              }
               .no-print { display: none !important; }
-              table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px; }
-              th, td { border: 1px solid #e2e8f0; padding: 8px 4px; text-align: left; }
-              th { background-color: #f8fafc !important; -webkit-print-color-adjust: exact; }
-              .summary-box { border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
-              .font-bold { font-weight: 700; }
-              .text-right { text-align: right; }
-              .text-center { text-align: center; }
-              /* Ensure colors print */
-              .text-emerald-600 { color: #059669 !important; }
-              .text-red-600 { color: #dc2626 !important; }
-              .bg-slate-50 { background-color: #f8fafc !important; }
+              
+              /* Ensure the grid of summary cards prints side-by-side */
+              .grid { display: grid !important; grid-template-columns: repeat(5, 1fr) !important; gap: 10px !important; margin-bottom: 20px !important; }
+              
+              /* Table styling for high density data */
+              table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
+              th, td { border: 1px solid #e2e8f0 !important; padding: 4px 6px !important; font-size: 9px !important; line-height: 1.2 !important; }
+              th { background-color: #1e293b !important; color: white !important; -webkit-print-color-adjust: exact; }
+              
+              /* Force specific background colors to show */
+              .bg-blue-900 { background-color: #1e3a8a !important; color: white !important; }
+              .bg-slate-800 { background-color: #1e293b !important; color: white !important; }
+              .bg-slate-700 { background-color: #334155 !important; color: white !important; }
+              .text-green-600 { color: #16a34a !important; font-weight: bold !important; }
+              .text-red-600 { color: #dc2626 !important; font-weight: bold !important; }
+              .bg-blue-50 { background-color: #eff6ff !important; }
             }
           </style>
         </head>
-        <body>
-          <div class="flex justify-between items-center border-b pb-4 mb-4">
+        <body class="p-4">
+          <div class="flex justify-between items-center mb-4 border-b-2 border-slate-200 pb-4">
             <div>
-              <h1 class="text-2xl font-bold">${title}</h1>
-              <p class="text-sm text-gray-500 font-medium">Generated on: ${new Date().toLocaleDateString()}</p>
+              <h1 class="text-xl font-extrabold text-slate-800">${title}</h1>
+              <p class="text-[10px] text-slate-500 uppercase font-bold">Trip Tally Management System • ${new Date().toLocaleDateString()}</p>
             </div>
             <div class="text-right">
-              <p class="font-bold text-lg">Trip Tally Fleet Management</p>
+              <p class="text-lg font-black text-blue-600">TRIP TALLY</p>
             </div>
           </div>
           ${content}
+          <div class="mt-4 pt-4 border-t border-slate-100 text-center">
+            <p class="text-[8px] text-slate-400 italic">This is a computer generated statement. For any discrepancies, please contact the depot office.</p>
+          </div>
         </body>
       </html>
     `);
     printWindow.document.close();
-    setTimeout(() => { printWindow.print(); printWindow.close(); }, 750);
+    // 1 second delay allows Tailwind to finish processing before the print dialog opens
+    setTimeout(() => { 
+      printWindow.print(); 
+      printWindow.close(); 
+    }, 1000);
   }
 };
 
@@ -847,15 +869,18 @@ const handleDestinationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     let unloading = "0";
     let weighbridge = tripForm.weighbridgeCharge;
 
-    // --- RGS LOGIC FOR UNLOADING CHARGE ---
-    if (value === "RGS") {
+    // --- LOGIC FOR UNLOADING CHARGE (RGS & PERUNDURAI VARIANTS) ---
+    const specialDestinations = ["RGS", "Perundurai-41", "Perundurai-42", "Perundurai-43", "Perundurai-KK8"];
+    
+    if (specialDestinations.includes(value)) {
       const weight = Number(tripForm.netWeight) || 0;
-      // Formula: (45 * weight) + 30
-      unloading = weight > 0 ? Math.round((45 * weight) + 30).toString() : "0";
+      // Formula: ((weight * 45) + 30)
+      unloading = weight > 0 ? Math.round((weight * 45) + 30).toString() : "0";
       
       // Maize rule: if load is Maize, weighbridge is 0, else 130
       weighbridge = tripForm.loadType === "Maize" ? "0" : "130";
     } else {
+      // Standard behavior for other destinations
       weighbridge = tripForm.loadType === "Maize" ? "0" : "130";
       unloading = "0"; 
     }
@@ -873,6 +898,16 @@ const handleDestinationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
 
 const handleInputChange = (field: string, value: string) => {
   let updatedForm = { ...tripForm, [field]: value };
+
+// Inside handleInputChange, update the if condition (around line 785)
+if (field === 'netWeight') {
+  const specialDestinations = ["RGS", "Perundurai-41", "Perundurai-42", "Perundurai-43", "Perundurai-KK8"];
+  if (specialDestinations.includes(updatedForm.to)) {
+    const weight = Number(value) || 0;
+    updatedForm.unloadingCharge = Math.round((weight * 45) + 30).toString();
+  }
+}
+
 
   // --- AUTO-CALCULATE RGS UNLOADING WHEN WEIGHT CHANGES ---
   if (field === 'netWeight' && updatedForm.to === 'RGS') {
@@ -1824,38 +1859,35 @@ const totalExpenses = Math.round(
             <div className="overflow-x-auto">
             <table className="w-full text-sm text-left border-collapse">
               <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px] whitespace-nowrap">
-                {/* Move the comment inside the <th> or remove it */}
-<tr>
-  <th className="px-4 py-3 w-12 text-center no-print">
-    {/* Hidden on print */}
-  </th>
-  <th className="px-3 py-3 border-r border-slate-700">Date</th>
-                  <th className="px-3 py-3 border-r border-slate-700">Bill No</th>
-                  <th className="px-3 py-3 border-r border-slate-700">Vehicle</th>
-                  <th className="px-3 py-3 border-r border-slate-700">Driver</th>
-                  <th className="px-3 py-3 border-r border-slate-700">Route</th>
-                  <th className="px-3 py-3 border-r border-slate-700">Contractor</th>
-                  <th className="px-3 py-3 border-r border-slate-700">Load</th>
-                  <th className="px-3 py-3 border-r border-slate-700">Net Wt</th>
-                  
-                  <th className="px-3 py-3 border-r border-slate-700">Rate</th>
-                  <th className="px-3 py-3 border-r border-slate-700 bg-blue-900 text-blue-200">Total Rent</th>
-                  <th className="px-3 py-3 border-r border-slate-700 text-orange-400">Advance</th>
-                  <th className="px-3 py-3 border-r border-slate-700 text-red-300">Weighbridge</th>
-                  
-                <th className="px-3 py-3 border-r border-slate-700 text-red-300">Expense</th>
+  <tr>
+    <th className="px-4 py-3 w-12 text-center no-print"></th>
+    <th className="px-3 py-3 border-r border-slate-700">Date</th>
+    <th className="px-3 py-3 border-r border-slate-700">Bill No</th>
+    <th className="px-3 py-3 border-r border-slate-700">Vehicle</th>
+    <th className="px-3 py-3 border-r border-slate-700">Driver</th>
+    <th className="px-3 py-3 border-r border-slate-700">Route</th>
+    <th className="px-3 py-3 border-r border-slate-700">Contractor</th>
+    <th className="px-3 py-3 border-r border-slate-700">Load</th>
+    <th className="px-3 py-3 border-r border-slate-700">Net Wt</th>
+    <th className="px-3 py-3 border-r border-slate-700">Rate</th>
+    <th className="px-3 py-3 border-r border-slate-700 bg-blue-900 text-blue-200">Total Rent</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-orange-400">Advance</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-red-300">Weighbridge</th>
+    
+    {/* Reordered columns start here */}
+    <th className="px-3 py-3 border-r border-slate-700 text-red-300">Loading</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-red-300">Unloading</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-red-300 bg-red-900/30">Extra Exp</th> 
+    {/* Reordered columns end here */}
 
-<th className="px-3 py-3 border-r border-slate-700 text-red-300">Loading</th>
-<th className="px-3 py-3 border-r border-slate-700 text-red-300">Unloading</th>
-
-                  <th className="px-3 py-3 border-r border-slate-700 text-green-300">Dr Pay</th>
-                  <th className="px-3 py-3 border-r border-slate-700 text-orange-300">Diesel Liter</th>
-                  <th className="px-3 py-3 border-r border-slate-700 text-orange-300">Fuel Price</th>
-                  <th className="px-3 py-3 border-r border-slate-700 bg-red-900 text-red-200">Total Exp</th>
-                  <th className="px-3 py-3 border-r border-slate-700 bg-emerald-900 text-emerald-200">Profit</th>
-                  <th className="px-2 py-3 text-center no-print">Del</th>
-                </tr>
-              </thead>
+    <th className="px-3 py-3 border-r border-slate-700 text-green-300">Dr Pay</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-orange-300">Diesel Liter</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-orange-300">Fuel Price</th>
+    <th className="px-3 py-3 border-r border-slate-700 bg-red-900 text-red-200">Total Exp</th>
+    <th className="px-3 py-3 border-r border-slate-700 bg-emerald-900 text-emerald-200">Profit</th>
+    <th className="px-2 py-3 text-center no-print">Del</th>
+  </tr>
+</thead>
               <tbody className="divide-y divide-slate-100 text-xs font-medium whitespace-nowrap">
   {filteredTrips.length === 0 ? (
     <tr>
@@ -1863,7 +1895,10 @@ const totalExpenses = Math.round(
     </tr>
   ) : (
     filteredTrips.map((trip: TripRecord, index: number) => {
+      // --- 1. DEFINE VARIABLES BEFORE USE ---
       const drPay = Math.round(Number(trip.driverTripPay) || 0);
+      const tripTotal = Math.round(Number(trip.tripTotal) || 0);
+      
       const tripExpense = Math.round(
         (Number(trip.loadingCharge) || 0) +
         (Number(trip.unloadingCharge) || 0) +
@@ -1873,9 +1908,9 @@ const totalExpenses = Math.round(
         (Number(trip.expense) || 0)
       );
 
-      const tripTotal = Math.round(Number(trip.tripTotal) || 0);
       const tripProfit = tripTotal - tripExpense;
 
+      // --- 2. RENDER THE ROW ---
       return (
         <tr key={`${trip.id}-${index}`} className="hover:bg-blue-50 transition-colors">
           <td className="px-4 py-2 no-print"></td>
@@ -1888,17 +1923,38 @@ const totalExpenses = Math.round(
           <td className="px-3 py-2 border-r border-slate-50">{trip.loadType}</td>
           <td className="px-3 py-2 border-r border-slate-50 font-bold">{trip.netWeight}</td>
           <td className="px-3 py-2 border-r border-slate-50">₹{trip.rate}</td>
-          <td className="px-3 py-2 border-r border-slate-50 font-bold text-blue-700 bg-blue-50/50">₹{tripTotal.toLocaleString()}</td>
+          
+          {/* Use defined tripTotal */}
+          <td className="px-3 py-2 border-r border-slate-50 font-bold text-blue-700 bg-blue-50/50">
+            ₹{tripTotal.toLocaleString()}
+          </td>
+          
           <td className="px-3 py-2 border-r border-slate-50 text-right text-orange-600 font-semibold">₹{trip.advance}</td>
           <td className="px-3 py-2 border-r border-slate-50 text-right text-slate-600">₹{trip.weighbridgeCharge}</td>
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-600 font-bold">₹{Number(trip.expense || 0).toLocaleString()}</td>
+          
+          {/* Expense Section Reordered */}
           <td className="px-3 py-2 border-r border-slate-50 text-right text-red-500 font-bold">₹{Number(trip.loadingCharge || 0).toLocaleString()}</td>
           <td className="px-3 py-2 border-r border-slate-50 text-right text-red-500 font-bold">₹{Number(trip.unloadingCharge || 0).toLocaleString()}</td>
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-green-600 font-bold bg-green-50/30">₹{drPay.toLocaleString()}</td>
+          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-600 font-bold bg-red-50/50">₹{Number(trip.expense || 0).toLocaleString()}</td>
+
+          {/* Use defined drPay */}
+          <td className="px-3 py-2 border-r border-slate-50 text-right text-green-600 font-bold bg-green-50/30">
+            ₹{drPay.toLocaleString()}
+          </td>
+          
           <td className="px-3 py-2 border-r border-slate-50 text-right text-slate-600">{trip.dieselLiters} L</td>
           <td className="px-3 py-2 border-r border-slate-50 text-right text-orange-600">₹{trip.dieselPrice}</td>
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-600 font-bold bg-red-50/30">₹{tripExpense.toLocaleString()}</td>
-          <td className={`px-3 py-2 text-right font-extrabold ${tripProfit >= 0 ? 'text-emerald-600 bg-emerald-50/50' : 'text-red-600 bg-red-50/50'}`}>₹{tripProfit.toLocaleString()}</td>
+          
+          {/* Use defined tripExpense */}
+          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-600 font-bold bg-red-50/30">
+            ₹{tripExpense.toLocaleString()}
+          </td>
+          
+          {/* Use defined tripProfit */}
+          <td className={`px-3 py-2 text-right font-extrabold ${tripProfit >= 0 ? 'text-emerald-600 bg-emerald-50/50' : 'text-red-600 bg-red-50/50'}`}>
+            ₹{tripProfit.toLocaleString()}
+          </td>
+          
           <td className="px-2 py-3 text-center no-print">
             <button onClick={() => handleDeleteTrip(trip.id)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-all">
               <Trash2 size={14}/>
@@ -2551,6 +2607,7 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
 
         <div id="driver-print-area" className="flex-1 overflow-auto bg-slate-50/50 p-6">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+              
     {/* 1. Total Advances */}
     <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
         <div className="text-xs font-bold text-slate-400 uppercase">Total Advances</div>
@@ -2596,19 +2653,24 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
             <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px] whitespace-nowrap">
                 <tr>
                     <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Load</th>
+                    <th className="px-4 py-3">Route</th> 
+                    <th className="px-4 py-3">Load Type</th>
+                    {/* Displaying Entered Net Weight */}
+                    <th className="px-4 py-3 text-center bg-slate-700 text-white">Net Weight</th>
                     <th className="px-4 py-3 text-right text-orange-400">Advance</th>
-                    <th className="px-4 py-3 text-center">W / L / U / E Details</th>
+                    {/* Dedicated Weighbridge Column */}
+                    <th className="px-4 py-3 text-right text-red-300">Weighbridge</th>
+                    <th className="px-4 py-3 text-center">L / U / E</th>
                     <th className="px-4 py-3 text-right text-green-400">Dr Pay</th>
                     <th className="px-4 py-3 text-right text-red-400">Total Exp</th>
-                    <th className="px-4 py-3 text-right text-white bg-slate-700">Net Added</th>
+                    <th className="px-4 py-3 text-right text-white bg-blue-900">Net Added</th>
                 </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-[11px] font-medium">
                 {loading ? (
-                    <tr><td colSpan={7} className="p-8 text-center text-slate-400">Loading History...</td></tr>
+                    <tr><td colSpan={10} className="p-8 text-center text-slate-400">Loading History...</td></tr>
                 ) : filteredHistory.length === 0 ? (
-                    <tr><td colSpan={7} className="p-8 text-center text-slate-400">No active trips found.</td></tr>
+                    <tr><td colSpan={10} className="p-8 text-center text-slate-400">No active trips found.</td></tr>
                 ) : filteredHistory.map((h, index) => {
                     const isSelected = selectedTripIds.has(h.id);
                     const netAddedValue = h.netAmount; 
@@ -2622,20 +2684,35 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
                             <td className="px-4 py-3 font-bold text-slate-700">
                                 {h.date}
                             </td>
-                            <td className="px-4 py-3">
-                                <div className="font-bold">{h.loadType}</div>
-                                <div className="text-slate-400">{h.netWeight}T</div>
+                            <td className="px-4 py-3 text-slate-600">
+                                <div className="flex items-center gap-1">
+                                    <span className="text-slate-400">➔</span> {h.to || "N/A"}
+                                </div>
                             </td>
+                            <td className="px-4 py-3 font-bold text-slate-800">
+                                {h.loadType}
+                            </td>
+                            {/* THE ENTERED NET WEIGHT COLUMN */}
+<td className="px-4 py-3 text-center">
+    <span className="bg-blue-50 text-blue-700 border border-blue-100 px-2 py-1 rounded-md font-extrabold">
+        {/* Use h.netWeight and handle potential null/undefined */}
+        {h.netWeight || h.net_weight || "0"} T
+    </span>
+</td>
                             <td className="px-4 py-3 text-right text-orange-600 font-bold">
                                 ₹{h.advance.toLocaleString()}
+                            </td>
+                            {/* SEPARATE WEIGHBRIDGE CHARGE */}
+                            <td className="px-4 py-3 text-right text-red-600 font-bold">
+                                ₹{h.weighbridgeCharge.toLocaleString()}
                             </td>
                             <td className="px-4 py-3 text-center bg-slate-50/50">
                                 <div className="flex flex-col items-center">
                                     <div className="font-mono text-slate-700">
-                                        {h.weighbridgeCharge}/{h.loadingCharge}/{h.unloadingCharge}/<span className="text-red-500 font-bold">{h.extraExpense}</span>
+                                        {h.loadingCharge}/{h.unloadingCharge}/<span className="text-red-500 font-bold">{h.extraExpense}</span>
                                     </div>
                                     <div className="text-[8px] text-slate-400 uppercase tracking-widest font-bold mt-0.5">
-                                        W / L / U / E
+                                        L / U / E
                                     </div>
                                 </div>
                             </td>
