@@ -90,7 +90,10 @@ const DESTINATION_RATES = [
 // --- INTERFACES ---
 
 interface VehicleDetails {
-  model: string; type: string; fuelType: string; emissionNorm: string; color: string;
+  model: string; type: string;
+  engineNo: string;    // Added
+  chassisNo: string;
+  fuelType: string; emissionNorm: string; color: string;
   seatCapacity: number; standingCapacity: number;
   insuranceCompany: string; insurancePolicyNo: string; insuranceValidUpto: string;
   fitnessValidUpto: string; puccNo: string; puccValidUpto: string;
@@ -638,13 +641,34 @@ export default function LMSApp() {
             </button>
             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-sm">{currentUser?.username?.charAt(0).toUpperCase() || 'A'}</div>
           </div>
-          {/* Notifications Panel */}
-          {showNotifPanel && (
-            <div className="absolute top-16 right-4 w-80 bg-white shadow-2xl rounded-xl border border-slate-200 z-50 animate-in fade-in slide-in-from-top-2 overflow-hidden">
-              <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50"><h3 className="font-bold text-slate-800">Notifications ({notifications.length})</h3><button onClick={() => setShowNotifPanel(false)}><X size={16} className="text-slate-400 hover:text-red-500"/></button></div>
-              <div className="max-h-80 overflow-y-auto p-2">{notifications.map(n => (<div key={n.id} className={`mb-2 p-3 rounded-lg border-l-4 ${n.severity === 'critical' ? 'bg-red-50 border-red-500' : 'bg-orange-50 border-orange-500'}`}><div className="flex justify-between items-start"><span className="font-bold text-sm text-slate-800">{n.type}</span><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${n.severity === 'critical' ? 'bg-red-200 text-red-800' : 'bg-orange-200 text-orange-800'}`}>{n.severity === 'critical' ? 'EXPIRED' : 'SOON'}</span></div><div className="text-xs text-slate-600 mt-1">Lorry: <strong>{n.vehicle}</strong></div><div className={`text-xs mt-1 font-medium ${n.severity === 'critical' ? 'text-red-600' : 'text-orange-600'}`}>{n.daysLeft < 0 ? `Expired ${Math.abs(n.daysLeft)} days ago` : `Expires in ${n.daysLeft} days`}</div></div>))}</div>
+{/* Notifications Panel */}
+{/* Notifications Panel */}
+{showNotifPanel && (
+  <div className="absolute top-16 right-4 w-80 bg-white shadow-2xl rounded-xl border border-slate-200 z-50 animate-in fade-in slide-in-from-top-2 overflow-hidden">
+    <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+      <h3 className="font-bold text-slate-800">Notifications ({notifications.length})</h3>
+      <button onClick={() => setShowNotifPanel(false)}><X size={16}/></button>
+    </div>
+    <div className="max-h-80 overflow-y-auto p-2">
+      {notifications.length === 0 ? (
+        <div className="p-4 text-center text-slate-400 text-sm">No new notifications</div>
+      ) : (
+        notifications.map(n => (
+          <div key={n.id} className={`mb-2 p-3 rounded-lg border-l-4 ${n.severity === 'critical' ? 'bg-red-50 border-red-500' : 'bg-orange-50 border-orange-500'}`}>
+            <div className="flex justify-between items-start">
+              <span className="font-bold text-sm text-slate-800">{n.type}</span>
+              {/* EDIT button was removed from here */}
             </div>
-          )}
+            <div className="text-xs text-slate-600 mt-1">Lorry: <strong>{n.vehicle}</strong></div>
+            <div className={`text-xs mt-1 font-medium ${n.severity === 'critical' ? 'text-red-600' : 'text-orange-600'}`}>
+              {n.daysLeft < 0 ? `Expired ${Math.abs(n.daysLeft)} days ago` : `Expires in ${n.daysLeft} days`}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  </div>
+)}
         </header>
 
         {/* MAIN CONTENT AREA */}
@@ -1244,41 +1268,32 @@ if (field === 'netWeight') {
       {/* ADD LORRY MODAL */}
       {isAdding && (
         <ModalWrapper title="Add New Lorry" onClose={() => setIsAdding(false)}>
-           <form onSubmit={handleAddLorry} className="space-y-4 pr-2">
-              <h4 className="font-bold text-slate-700 text-sm border-b pb-1 mb-2">Basic Details</h4>
-              <div className="grid grid-cols-2 gap-3">
-                 <Input label="Reg Number" value={form.reg} onChange={(e) => setForm({...form, reg: e.target.value})} required uppercase />
-                 <Input label="Model" value={form.model} onChange={(e) => setForm({...form, model: e.target.value})} />
-              </div>
-            
+           {/* Replace the Add Lorry form contents with this */}
+<form onSubmit={handleAddLorry} className="space-y-4 pr-2">
+  <h4 className="font-bold text-slate-700 text-sm border-b pb-1 mb-2">Identification</h4>
+  <div className="grid grid-cols-2 gap-3">
+    <Input label="Reg Number" value={form.reg} onChange={(e) => setForm({...form, reg: e.target.value})} required uppercase />
+    <Input label="Model" value={form.model} onChange={(e) => setForm({...form, model: e.target.value})} />
+  </div>
+  <div className="grid grid-cols-2 gap-3">
+    <Input label="Engine Number" value={form.engineNo} onChange={(e) => setForm({...form, engineNo: e.target.value})} />
+    <Input label="Chassis Number" value={form.chassisNo} onChange={(e) => setForm({...form, chassisNo: e.target.value})} />
+  </div>
 
-              <h4 className="font-bold text-blue-700 text-sm border-b pb-1 mb-2 mt-4">Insurance Info</h4>
-              <Input label="Company" value={form.insuranceCompany} onChange={(e) => setForm({...form, insuranceCompany: e.target.value})} />
-              <div className="grid grid-cols-2 gap-3">
-                 <Input label="Policy No" value={form.insurancePolicyNo} onChange={(e) => setForm({...form, insurancePolicyNo: e.target.value})} />
-                 <Input label="Valid Upto" type="date" value={form.insuranceValidUpto} onChange={(e) => setForm({...form, insuranceValidUpto: e.target.value})} />
-              </div>
+  <h4 className="font-bold text-blue-700 text-sm border-b pb-1 mb-2 mt-4">Taxes & Permits</h4>
+  <div className="grid grid-cols-2 gap-3">
+    <Input label="Road Tax Upto" type="date" value={form.roadTaxValidUpto} onChange={(e) => setForm({...form, roadTaxValidUpto: e.target.value})} />
+    <Input label="Green Tax Upto" type="date" value={form.greenTaxValidUpto} onChange={(e) => setForm({...form, greenTaxValidUpto: e.target.value})} />
+  </div>
+  <div className="grid grid-cols-2 gap-3">
+    <Input label="Fitness Valid Upto" type="date" value={form.fitnessValidUpto} onChange={(e) => setForm({...form, fitnessValidUpto: e.target.value})} />
+    <Input label="Permit Valid Upto" type="date" value={form.permitValidUpto} onChange={(e) => setForm({...form, permitValidUpto: e.target.value})} />
+  </div>
 
-              <h4 className="font-bold text-green-700 text-sm border-b pb-1 mb-2 mt-4">Compliance (FC / PUCC)</h4>
-              <Input label="Fitness Valid Upto" type="date" value={form.fitnessValidUpto} onChange={(e) => setForm({...form, fitnessValidUpto: e.target.value})} />
-              <div className="grid grid-cols-2 gap-3">
-                 <Input label="PUCC No" value={form.puccNo} onChange={(e) => setForm({...form, puccNo: e.target.value})} />
-                 <Input label="PUCC Valid Upto" type="date" value={form.puccValidUpto} onChange={(e) => setForm({...form, puccValidUpto: e.target.value})} />
-              </div>
-
-              <h4 className="font-bold text-purple-700 text-sm border-b pb-1 mb-2 mt-4">Permits & Reg</h4>
-              <Input label="Registering Authority" value={form.registeringAuthority} onChange={(e) => setForm({...form, registeringAuthority: e.target.value})} />
-              <div className="grid grid-cols-2 gap-3">
-                 <Input label="Permit Valid Upto" type="date" value={form.permitValidUpto} onChange={(e) => setForm({...form, permitValidUpto: e.target.value})} />
-                 <Input label="Green Tax Upto" type="date" value={form.greenTax} onChange={(e) => setForm({...form, greenTax: e.target.value})} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                 <Input label="National Permit No" value={form.nationalPermitNo} onChange={(e) => setForm({...form, nationalPermitNo: e.target.value})} />
-                 <Input label="NP Valid Upto" type="date" value={form.nationalPermitValidUpto} onChange={(e) => setForm({...form, nationalPermitValidUpto: e.target.value})} />
-              </div>
-
-              <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold mt-4 shadow-md hover:bg-blue-700">Save Vehicle to Database</button>
-           </form>
+  <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold mt-4 shadow-md hover:bg-blue-700">
+    Save Vehicle to Database
+  </button>
+</form>
         </ModalWrapper>
       )}
     </div>
@@ -1975,6 +1990,19 @@ const totalExpenses = Math.round(
 
 const HistoryView = ({ historyLogs, setHistoryLogs, setTrips, setDrivers, drivers }: any) => {
   const driversGlobal = drivers;
+  // Add this inside the HistoryView component (above the return statement)
+const handleDeleteSettlement = async (logId: number) => {
+  if (!confirm("⚠️ Are you sure you want to delete this settlement record?\n\nThis will NOT restore the trips or change driver balances. It only removes the history log.")) return;
+
+  const { error } = await supabase.from('settlements').delete().eq('id', logId);
+
+  if (error) {
+    alert("Error deleting history: " + error.message);
+  } else {
+    setHistoryLogs((prev: any[]) => prev.filter(h => h.id !== logId));
+    alert("Settlement record deleted.");
+  }
+};
 // In HistoryView component, update the handleRetrieveSettlement function:
 const handleRetrieveSettlement = async (log: WeeklyHistory) => {
   if (!confirm(`Retrieve trips for ${log.driverName}? \nThis will restore trips and update wallet.`)) return;
@@ -2140,13 +2168,22 @@ const handleRetrieveSettlement = async (log: WeeklyHistory) => {
                    </div>
 
 
-                   <div className="flex justify-end mb-4">
+                   <div className="flex justify-end items-center gap-3 mb-4">
+  {/* Retrieve Button */}
   <button
-   onClick={() => handleRetrieveSettlement(log)}
-
-    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow flex items-center gap-2"
+    onClick={() => handleRetrieveSettlement(log)}
+    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow flex items-center gap-2 transition-all active:scale-95"
   >
     <RefreshCw size={16}/> Retrieve
+  </button>
+
+  {/* NEW: Delete Button */}
+  <button
+    onClick={() => handleDeleteSettlement(log.id)}
+    className="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg border border-red-200 transition-all active:scale-95"
+    title="Delete History Record"
+  >
+    <Trash2 size={18}/>
   </button>
 </div>
 
@@ -2281,17 +2318,91 @@ const ModalWrapper = ({ title, children, onClose, headerContent }: any) => (
   </div>
 );
 
-const DetailsModal = ({ data, onClose }: { data: Vehicle, onClose: () => void }) => {
-  const details = data.vehicleDetails;
+const DetailsModal = ({ data, onClose, setVehicles }: any) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState(data.vehicleDetails);
+
+  const handleUpdate = async () => {
+    const { error } = await supabase
+      .from('vehicles')
+      .update({ details: editForm })
+      .eq('id', data.id);
+
+    if (error) {
+      alert("Update failed: " + error.message);
+    } else {
+      setVehicles((prev: any) => prev.map((v: any) => v.id === data.id ? { ...v, vehicleDetails: editForm } : v));
+      setIsEditing(false);
+      alert("Vehicle updated successfully!");
+    }
+  };
+
+  const renderField = (label: string, key: string, type = "text") => (
+    <div>
+      <span className="text-slate-500 font-semibold block text-[10px] uppercase">{label}</span>
+      {isEditing ? (
+        <input 
+          type={type} 
+          className="w-full border rounded p-1 text-sm bg-white" 
+          value={editForm[key] || ''} 
+          onChange={(e) => setEditForm({ ...editForm, [key]: e.target.value })} 
+        />
+      ) : (
+        <span className="text-slate-800 font-medium">{editForm[key] || 'N/A'}</span>
+      )}
+    </div>
+  );
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-3xl rounded-xl shadow-2xl animate-in zoom-in-95 overflow-hidden">
-        <div className="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50"><div><h3 className="font-bold text-lg text-slate-800">{data.regNumber} - Vehicle Details</h3><p className="text-xs text-slate-500">Complete vehicle information</p></div><button onClick={onClose}><X size={20} className="text-slate-400 hover:text-red-500"/></button></div>
-        <div className="p-6 max-h-[70vh] overflow-y-auto space-y-4">
-          <div className="bg-slate-50 rounded-lg p-4 space-y-3"><h4 className="font-bold text-slate-700 flex items-center gap-2"><Truck size={16}/> Basic Information</h4><div className="grid grid-cols-2 gap-3 text-sm"><div><span className="text-slate-500 font-semibold">Model:</span> <span className="text-slate-800">{details.model}</span></div><div><span className="text-slate-500 font-semibold">Type:</span> <span className="text-slate-800">{details.type}</span></div><div><span className="text-slate-500 font-semibold">Fuel Type:</span> <span className="text-slate-800">{details.fuelType}</span></div><div><span className="text-slate-500 font-semibold">Emission Norm:</span> <span className="text-slate-800">{details.emissionNorm}</span></div><div><span className="text-slate-500 font-semibold">Color:</span> <span className="text-slate-800 flex items-center gap-2"><Palette size={14}/>{details.color}</span></div><div><span className="text-slate-500 font-semibold">Seat Capacity:</span> <span className="text-slate-800">{details.seatCapacity}</span></div></div></div>
-          <div className="bg-blue-50 rounded-lg p-4 space-y-3"><h4 className="font-bold text-blue-700 flex items-center gap-2"><ShieldCheck size={16}/> Insurance Details</h4><div className="grid grid-cols-2 gap-3 text-sm"><div><span className="text-slate-500 font-semibold">Company:</span> <span className="text-slate-800">{details.insuranceCompany}</span></div><div><span className="text-slate-500 font-semibold">Policy No:</span> <span className="text-slate-800">{details.insurancePolicyNo}</span></div><div><span className="text-slate-500 font-semibold">Valid Upto:</span> <span className="text-slate-800 flex items-center gap-1"><CalendarDays size={14}/>{details.insuranceValidUpto}</span></div></div></div>
-          <div className="bg-green-50 rounded-lg p-4 space-y-3"><h4 className="font-bold text-green-700 flex items-center gap-2"><FileCheck size={16}/> Compliance & Permits</h4><div className="grid grid-cols-2 gap-3 text-sm"><div><span className="text-slate-500 font-semibold">Fitness Valid Upto:</span> <span className="text-slate-800">{details.fitnessValidUpto}</span></div><div><span className="text-slate-500 font-semibold">PUCC No:</span> <span className="text-slate-800">{details.puccNo}</span></div><div><span className="text-slate-500 font-semibold">PUCC Valid Upto:</span> <span className="text-slate-800">{details.puccValidUpto}</span></div><div><span className="text-slate-500 font-semibold">Permit Valid Upto:</span> <span className="text-slate-800">{details.permitValidUpto}</span></div><div><span className="text-slate-500 font-semibold">National Permit No:</span> <span className="text-slate-800">{details.nationalPermitNo}</span></div><div><span className="text-slate-500 font-semibold">National Permit Valid:</span> <span className="text-slate-800">{details.nationalPermitValidUpto}</span></div></div></div>
-          <div className="bg-purple-50 rounded-lg p-4 space-y-3"><h4 className="font-bold text-purple-700 flex items-center gap-2"><Building2 size={16}/> Registration & Tax</h4><div className="grid grid-cols-2 gap-3 text-sm"><div><span className="text-slate-500 font-semibold">Registering Authority:</span> <span className="text-slate-800">{details.registeringAuthority}</span></div><div><span className="text-slate-500 font-semibold">Green Tax:</span> <span className="text-slate-800 flex items-center gap-1"><Leaf size={14}/>{details.greenTax}</span></div></div></div>
+      <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl animate-in zoom-in-95 overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="flex justify-between items-center p-5 border-b bg-slate-50">
+          <div>
+            <h3 className="font-bold text-lg text-slate-800">{data.regNumber}</h3>
+            <p className="text-xs text-slate-500">Technical & Compliance Records</p>
+          </div>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => isEditing ? handleUpdate() : setIsEditing(true)}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all ${isEditing ? 'bg-green-600 text-white' : 'bg-blue-100 text-blue-700'}`}
+            >
+              {isEditing ? 'SAVE CHANGES' : 'EDIT DETAILS'}
+            </button>
+            <button onClick={onClose} className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded"><X size={20}/></button>
+          </div>
+        </div>
+
+        <div className="p-6 overflow-y-auto space-y-6">
+          {/* IDENTIFICATION */}
+          <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+            {renderField("Model", "model")}
+            {renderField("Engine Number", "engineNo")}
+            {renderField("Chassis Number", "chassisNo")}
+            {renderField("Registering Authority", "registeringAuthority")}
+          </div>
+
+          {/* COMPLIANCE */}
+          <div className="space-y-4">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Validity Dates</h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {renderField("Insurance Valid", "insuranceValidUpto", "date")}
+              {renderField("Fitness (FC)", "fitnessValidUpto", "date")}
+              {renderField("Road Tax", "roadTaxValidUpto", "date")}
+              {renderField("Green Tax", "greenTaxValidUpto", "date")}
+              {renderField("PUCC Valid", "puccValidUpto", "date")}
+              {renderField("Permit Valid", "permitValidUpto", "date")}
+            </div>
+          </div>
+          
+          <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+             <h4 className="text-xs font-bold text-blue-700 uppercase mb-3">Insurance & National Permit</h4>
+             <div className="grid grid-cols-2 gap-4">
+               {renderField("Insurance Co.", "insuranceCompany")}
+               {renderField("Policy No.", "insurancePolicyNo")}
+               {renderField("NP Number", "nationalPermitNo")}
+               {renderField("NP Valid Upto", "nationalPermitValidUpto", "date")}
+             </div>
+          </div>
         </div>
       </div>
     </div>
