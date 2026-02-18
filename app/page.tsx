@@ -321,19 +321,39 @@ const AuthScreen = ({ onLogin }: { onLogin: (user: any) => void }) => {
   const [error, setError] = useState('');
 
   const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  e.preventDefault();
+  setLoading(true);
+  setError('');
 
-    if (isLogin) {
-      const { data, error } = await supabase.from('app_users').select('*').eq('username', formData.username).eq('password', formData.password).single();
-      if (error || !data) setError('Invalid Username or Password'); else onLogin(data);
-    } else {
-      const { data, error } = await supabase.from('app_users').insert([{ username: formData.username, password: formData.password, phone: formData.phone }]).select().single();
-      if (error) setError(error.message.includes('unique') ? 'Username already exists' : 'Error creating account'); else { alert('Account created! Please log in.'); setIsLogin(true); }
+  if (isLogin) {
+    // 1. Fetch the user from Supabase
+    const { data, error } = await supabase
+      .from('app_users')
+      .select('*')
+      .eq('username', formData.username)
+      .eq('password', formData.password)
+      .single();
+
+    if (error || !data) {
+      setError('Invalid Username or Password');
+    } 
+    // 2. HARD RESTRICTION: Check if the user is Anjaneya Transport
+    else if (data.username !== 'Anjaneya Transport') {
+      setError('Access Denied: This system is restricted to authorized transport personnel only.');
+    } 
+    else {
+      onLogin(data);
     }
-    setLoading(false);
-  };
+  } else {
+    // Optional: Disable Sign Up entirely to prevent others from creating accounts
+    setError('New registrations are currently disabled by the administrator.');
+    
+    /* If you still want to allow sign up but keep it private, use this:
+    const { data, error } = await supabase.from('app_users').insert([...]).select().single();
+    */
+  }
+  setLoading(false);
+};
 
   return (
     <div className="flex h-screen w-full bg-slate-900 items-center justify-center p-4">
@@ -352,7 +372,7 @@ const AuthScreen = ({ onLogin }: { onLogin: (user: any) => void }) => {
             <div><label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Password</label><div className="relative"><Lock className="absolute left-3 top-3 text-slate-400" size={18} /><input type="password" className="w-full border pl-10 p-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required /></div></div>
             <button disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2">{loading ? <RefreshCw className="animate-spin" size={18}/> : (isLogin ? 'Login to Dashboard' : 'Sign Up')}</button>
           </form>
-          <div className="mt-6 text-center text-sm"><span className="text-slate-500">{isLogin ? "Don't have an account?" : "Already have an account?"}</span><button onClick={() => setIsLogin(!isLogin)} className="text-blue-600 font-bold ml-1 hover:underline">{isLogin ? 'Sign Up' : 'Login'}</button></div>
+          <div className="mt-6 text-center text-sm"><span className="text-slate-500">{isLogin ? "Don't have an account?" : "Already have an account?"}</span></div>
         </div>
       </div>
     </div>
