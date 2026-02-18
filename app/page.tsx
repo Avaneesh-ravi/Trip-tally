@@ -19,11 +19,15 @@ const CONTRACTOR_LOADS: Record<string, string[]> = {
   "KSP": ["Maize", "Rape Seed", "Soya", "Fertilizer"],
   "TKS": ["Fertilizer"],
   "SBT": ["Rice", "Wheat", "Fertilizer"],
-  "MP SAMY": ["Rape Seed"]
+  "MP SAMY": ["Rape Seed"],
+  "SS":["Maize"],
+  "KGS":["Sugar"],
 };
 
 const DESTINATION_RATES = [
-  { name: "Null", rate: 0 },{ name: "KK Nagar", rate: 0 },{ name: "Thirumagal", rate: 0 },{ name: "SVM", rate: 0 },{ name: "SK Samy", rate: 0 },{ name: "RGS", rate: 295 },{ name: "Moolapalayam", rate: 90 },{ name: "Perundurai", rate: 295 },{ name: "Athani", rate: 430 }, { name: "Anthiyur", rate: 430 }, { name: "Ammapettai", rate: 445 },
+  { name: "Null", rate: 0 },{ name: "RGS", rate: 295 },
+  { name: "Perundurai-41", rate: 295 },{ name: "Perundurai-42", rate: 295 },{ name: "Perundurai-43", rate: 295 },{ name: "Perundurai-KK8", rate: 295 }
+  ,{ name: "SKM", rate: 200 },{ name: "KK Nagar", rate: 0 },{ name: "Thirumagal", rate: 0 },{ name: "SVM", rate: 0 },{ name: "SK Samy", rate: 0 },{ name: "Moolapalayam", rate: 90 },{ name: "Perundurai", rate: 295 },{ name: "Athani", rate: 430 }, { name: "Anthiyur", rate: 430 }, { name: "Ammapettai", rate: 445 },
   { name: "Arachalur", rate: 370 }, { name: "Alangiyam", rate: 600 }, { name: "Alukuli", rate: 460 },
   { name: "Avinashi", rate: 550 }, { name: "Hanumanpalli", rate: 350 }, { name: "Appakudal", rate: 410 },
   { name: "Anaimalai", rate: 700 }, { name: "Irayamangalam", rate: 365 }, { name: "Udumalpet", rate: 650 },
@@ -86,7 +90,10 @@ const DESTINATION_RATES = [
 // --- INTERFACES ---
 
 interface VehicleDetails {
-  model: string; type: string; fuelType: string; emissionNorm: string; color: string;
+  model: string; type: string;
+  engineNo: string;    // Added
+  chassisNo: string;
+  fuelType: string; emissionNorm: string; color: string;
   seatCapacity: number; standingCapacity: number;
   insuranceCompany: string; insurancePolicyNo: string; insuranceValidUpto: string;
   fitnessValidUpto: string; puccNo: string; puccValidUpto: string;
@@ -157,6 +164,7 @@ interface Vehicle {
     commissionType: 'percentage' | 'fixed'; 
     commissionValue: string;
     advance: string;
+    expense?: string;
   };
 }
 
@@ -223,7 +231,7 @@ const printSection = (elementId: string, title: string) => {
   const content = document.getElementById(elementId)?.innerHTML;
   if (!content) return;
 
-  const printWindow = window.open('', '', 'width=900,height=600');
+  const printWindow = window.open('', '', 'width=1200,height=800');
   if (printWindow) {
     printWindow.document.write(`
       <html>
@@ -231,24 +239,61 @@ const printSection = (elementId: string, title: string) => {
           <title>${title}</title>
           <script src="https://cdn.tailwindcss.com"></script>
           <style>
-            body { font-family: sans-serif; padding: 20px; -webkit-print-color-adjust: exact; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10px; }
-            th, td { border: 1px solid #cbd5e1; padding: 6px; text-align: left; }
-            th { background-color: #f1f5f9; color: #334155; }
-            .no-print { display: none !important; }
-            h2, h3 { color: #1e293b; margin-bottom: 10px; }
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+            
+            @media print {
+              @page { size: landscape; margin: 8mm; }
+              body { 
+                font-family: 'Inter', sans-serif;
+                background: white !important; 
+                padding: 0; 
+                margin: 0; 
+                -webkit-print-color-adjust: exact !important; 
+                print-color-adjust: exact !important; 
+              }
+              .no-print { display: none !important; }
+              
+              /* Ensure the grid of summary cards prints side-by-side */
+              .grid { display: grid !important; grid-template-columns: repeat(5, 1fr) !important; gap: 10px !important; margin-bottom: 20px !important; }
+              
+              /* Table styling for high density data */
+              table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
+              th, td { border: 1px solid #e2e8f0 !important; padding: 4px 6px !important; font-size: 9px !important; line-height: 1.2 !important; }
+              th { background-color: #1e293b !important; color: white !important; -webkit-print-color-adjust: exact; }
+              
+              /* Force specific background colors to show */
+              .bg-blue-900 { background-color: #1e3a8a !important; color: white !important; }
+              .bg-slate-800 { background-color: #1e293b !important; color: white !important; }
+              .bg-slate-700 { background-color: #334155 !important; color: white !important; }
+              .text-green-600 { color: #16a34a !important; font-weight: bold !important; }
+              .text-red-600 { color: #dc2626 !important; font-weight: bold !important; }
+              .bg-blue-50 { background-color: #eff6ff !important; }
+            }
           </style>
         </head>
-        <body>
-          <h1 class="text-2xl font-bold mb-4 text-center border-b pb-2">${title}</h1>
+        <body class="p-4">
+          <div class="flex justify-between items-center mb-4 border-b-2 border-slate-200 pb-4">
+            <div>
+              <h1 class="text-xl font-extrabold text-slate-800">${title}</h1>
+              <p class="text-[10px] text-slate-500 uppercase font-bold">Trip Tally Management System • ${new Date().toLocaleDateString()}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-lg font-black text-blue-600">TRIP TALLY</p>
+            </div>
+          </div>
           ${content}
-          <script>
-            setTimeout(() => { window.print(); window.close(); }, 500);
-          </script>
+          <div class="mt-4 pt-4 border-t border-slate-100 text-center">
+            <p class="text-[8px] text-slate-400 italic">This is a computer generated statement. For any discrepancies, please contact the depot office.</p>
+          </div>
         </body>
       </html>
     `);
     printWindow.document.close();
+    // 1 second delay allows Tailwind to finish processing before the print dialog opens
+    setTimeout(() => { 
+      printWindow.print(); 
+      printWindow.close(); 
+    }, 1000);
   }
 };
 
@@ -276,39 +321,20 @@ const AuthScreen = ({ onLogin }: { onLogin: (user: any) => void }) => {
   const [error, setError] = useState('');
 
   const handleAuth = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError('');
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
-  if (isLogin) {
-    // 1. Fetch the user from Supabase
-    const { data, error } = await supabase
-      .from('app_users')
-      .select('*')
-      .eq('username', formData.username)
-      .eq('password', formData.password)
-      .single();
-
-    if (error || !data) {
-      setError('Invalid Username or Password');
-    } 
-    // 2. HARD RESTRICTION: Check if the user is Anjaneya Transport
-    else if (data.username !== 'Anjaneya Transport') {
-      setError('Access Denied: This system is restricted to authorized transport personnel only.');
-    } 
-    else {
-      onLogin(data);
+    if (isLogin) {
+      const { data, error } = await supabase.from('app_users').select('*').eq('username', formData.username).eq('password', formData.password).single();
+      if (error || !data) setError('Invalid Username or Password'); else onLogin(data);
+    } else {
+      const { data, error } = await supabase.from('app_users').insert([{ username: formData.username, password: formData.password, phone: formData.phone }]).select().single();
+      if (error) setError(error.message.includes('unique') ? 'Username already exists' : 'Error creating account'); else { alert('Account created! Please log in.'); setIsLogin(true); }
     }
-  } else {
-    // Optional: Disable Sign Up entirely to prevent others from creating accounts
-    setError('New registrations are currently disabled by the administrator.');
-    
-    /* If you still want to allow sign up but keep it private, use this:
-    const { data, error } = await supabase.from('app_users').insert([...]).select().single();
-    */
-  }
-  setLoading(false);
-};
+    setLoading(false);
+  };
+
   return (
     <div className="flex h-screen w-full bg-slate-900 items-center justify-center p-4">
       <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95">
@@ -326,7 +352,7 @@ const AuthScreen = ({ onLogin }: { onLogin: (user: any) => void }) => {
             <div><label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Password</label><div className="relative"><Lock className="absolute left-3 top-3 text-slate-400" size={18} /><input type="password" className="w-full border pl-10 p-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required /></div></div>
             <button disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2">{loading ? <RefreshCw className="animate-spin" size={18}/> : (isLogin ? 'Login to Dashboard' : 'Sign Up')}</button>
           </form>
-          <div className="mt-6 text-center text-sm"><span className="text-slate-500">{isLogin ? "Don't have an account?" : "Already have an account?"}</span></div>
+          <div className="mt-6 text-center text-sm"><span className="text-slate-500">{isLogin ? "Don't have an account?" : "Already have an account?"}</span><button onClick={() => setIsLogin(!isLogin)} className="text-blue-600 font-bold ml-1 hover:underline">{isLogin ? 'Sign Up' : 'Login'}</button></div>
         </div>
       </div>
     </div>
@@ -615,13 +641,34 @@ export default function LMSApp() {
             </button>
             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-sm">{currentUser?.username?.charAt(0).toUpperCase() || 'A'}</div>
           </div>
-          {/* Notifications Panel */}
-          {showNotifPanel && (
-            <div className="absolute top-16 right-4 w-80 bg-white shadow-2xl rounded-xl border border-slate-200 z-50 animate-in fade-in slide-in-from-top-2 overflow-hidden">
-              <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50"><h3 className="font-bold text-slate-800">Notifications ({notifications.length})</h3><button onClick={() => setShowNotifPanel(false)}><X size={16} className="text-slate-400 hover:text-red-500"/></button></div>
-              <div className="max-h-80 overflow-y-auto p-2">{notifications.map(n => (<div key={n.id} className={`mb-2 p-3 rounded-lg border-l-4 ${n.severity === 'critical' ? 'bg-red-50 border-red-500' : 'bg-orange-50 border-orange-500'}`}><div className="flex justify-between items-start"><span className="font-bold text-sm text-slate-800">{n.type}</span><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${n.severity === 'critical' ? 'bg-red-200 text-red-800' : 'bg-orange-200 text-orange-800'}`}>{n.severity === 'critical' ? 'EXPIRED' : 'SOON'}</span></div><div className="text-xs text-slate-600 mt-1">Lorry: <strong>{n.vehicle}</strong></div><div className={`text-xs mt-1 font-medium ${n.severity === 'critical' ? 'text-red-600' : 'text-orange-600'}`}>{n.daysLeft < 0 ? `Expired ${Math.abs(n.daysLeft)} days ago` : `Expires in ${n.daysLeft} days`}</div></div>))}</div>
+{/* Notifications Panel */}
+{/* Notifications Panel */}
+{showNotifPanel && (
+  <div className="absolute top-16 right-4 w-80 bg-white shadow-2xl rounded-xl border border-slate-200 z-50 animate-in fade-in slide-in-from-top-2 overflow-hidden">
+    <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+      <h3 className="font-bold text-slate-800">Notifications ({notifications.length})</h3>
+      <button onClick={() => setShowNotifPanel(false)}><X size={16}/></button>
+    </div>
+    <div className="max-h-80 overflow-y-auto p-2">
+      {notifications.length === 0 ? (
+        <div className="p-4 text-center text-slate-400 text-sm">No new notifications</div>
+      ) : (
+        notifications.map(n => (
+          <div key={n.id} className={`mb-2 p-3 rounded-lg border-l-4 ${n.severity === 'critical' ? 'bg-red-50 border-red-500' : 'bg-orange-50 border-orange-500'}`}>
+            <div className="flex justify-between items-start">
+              <span className="font-bold text-sm text-slate-800">{n.type}</span>
+              {/* EDIT button was removed from here */}
             </div>
-          )}
+            <div className="text-xs text-slate-600 mt-1">Lorry: <strong>{n.vehicle}</strong></div>
+            <div className={`text-xs mt-1 font-medium ${n.severity === 'critical' ? 'text-red-600' : 'text-orange-600'}`}>
+              {n.daysLeft < 0 ? `Expired ${Math.abs(n.daysLeft)} days ago` : `Expires in ${n.daysLeft} days`}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  </div>
+)}
         </header>
 
         {/* MAIN CONTENT AREA */}
@@ -695,17 +742,17 @@ const DashboardView = ({ vehicles, setVehicles, drivers, setDrivers, transaction
 const [tripForm, setTripForm] = useState({ 
   date: '', billNo: '', driverName: '', to: '', contractor: '', 
   loadType: '', netWeight: '', rate: 0, tripTotal: 0,
-  loadingCharge: '500',            // ✅ DEFAULT
-  unloadingCharge: '0',            // ✅ DEFAULT
+  loadingCharge: '500',           // ✅ PRE-FILLED DEFAULT
+  unloadingCharge: '0',
   driverTripPay: 0, 
-  dieselPrice: '0',                // ✅ DEFAULT
-  dieselLiters: '0',               // ✅ DEFAULT
-  weighbridgeCharge: '130',        // ✅ DEFAULT
+  dieselPrice: '0', 
+  dieselLiters: '0', 
+  weighbridgeCharge: '130', 
   from: '',
-  expense: '0',                    // ✅ DEFAULT
- commissionType: 'percentage' as 'percentage' | 'fixed', 
+  expense: '0',
+  commissionType: 'percentage' as 'percentage' | 'fixed', 
   commissionValue: '15',
-  advance: '0'                     // ✅ default advance 0
+  advance: '0'
 });
 
     
@@ -767,19 +814,19 @@ const [tripForm, setTripForm] = useState({
   };
 
   const openActionModal = (type: string, vehicle: Vehicle) => {
-    if (type === 'driver') { setShowDriverList(true); return; }
-    setActiveModal({ type, data: vehicle, vehicleId: vehicle.id });
-    setErrors([]); 
-    setEditingTripId(null);
-    setShowEditSearch(false);
-    setEditSearchForm({ billNo: '', date: '' });
-    setIsSubmitting(false); 
+  if (type === 'driver') { setShowDriverList(true); return; }
+  setActiveModal({ type, data: vehicle, vehicleId: vehicle.id });
+  setErrors([]); 
+  setEditingTripId(null);
+  setShowEditSearch(false);
+  setEditSearchForm({ billNo: '', date: '' });
+  setIsSubmitting(false); 
 
-    setIsCustomContractor(false);
-    setIsCustomLoad(false);
-    setIsCustomDestination(false);
+  setIsCustomContractor(false);
+  setIsCustomLoad(false);
+  setIsCustomDestination(false);
 
-    if(type === 'trip') {
+  if(type === 'trip') {
       const currentContractor = vehicle.currentTrip.contractor;
       const currentLoad = vehicle.currentTrip.loadType;
       const currentDest = vehicle.currentTrip.to;
@@ -795,13 +842,14 @@ const [tripForm, setTripForm] = useState({
       setTripForm({ 
         
         ...vehicle.currentTrip, 
-        weighbridgeCharge: vehicle.currentTrip.weighbridgeCharge || '130',
-        commissionType: vehicle.currentTrip.commissionType || 'percentage',
-        commissionValue: vehicle.currentTrip.commissionValue || '15',
-        advance: vehicle.currentTrip.advance || '',
-        
-      } as any); 
-    } else if (type === 'rent') {
+        loadingCharge: vehicle.currentTrip.loadingCharge || '500', 
+      weighbridgeCharge: vehicle.currentTrip.weighbridgeCharge || '130',
+      commissionType: vehicle.currentTrip.commissionType || 'percentage',
+      commissionValue: vehicle.currentTrip.commissionValue || '15',
+      advance: vehicle.currentTrip.advance || '0',
+      expense: vehicle.currentTrip.expense || '0'
+    } as any); 
+  } else if (type === 'rent') {
       setRentForm({
         date: vehicle.rentInfo.date || '', time: vehicle.rentInfo.time || '', total: vehicle.rentInfo.total.toString(), 
         received: vehicle.rentInfo.received.toString(), pending: vehicle.rentInfo.pending.toString(), commissionRate: '0.15'
@@ -834,78 +882,85 @@ const [tripForm, setTripForm] = useState({
   const handleDriverSelect = (driver: Driver) => { setShowDriverList(false); setSelectedDriverForModal(driver); };
     
 const handleDestinationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
+  const value = e.target.value;
+  
+  if (value === "REQ_CUSTOM") {
+    setIsCustomDestination(true);
+    setTripForm({ ...tripForm, to: '', rate: 0 });
+  } else {
+    const selectedObj = DESTINATION_RATES.find(d => d.name === value);
     
-    if (value === "REQ_CUSTOM") {
-      setIsCustomDestination(true);
-      setTripForm({ ...tripForm, to: '', rate: 0 });
-    } else {
-      const selectedObj = DESTINATION_RATES.find(d => d.name === value);
+    let unloading = "0";
+    let weighbridge = tripForm.weighbridgeCharge;
+
+    // --- LOGIC FOR UNLOADING CHARGE (RGS & PERUNDURAI VARIANTS) ---
+    const specialDestinations = ["RGS", "Perundurai-41", "Perundurai-42", "Perundurai-43", "Perundurai-KK8"];
+    
+    if (specialDestinations.includes(value)) {
+      const weight = Number(tripForm.netWeight) || 0;
+      // Formula: ((weight * 45) + 30)
+      unloading = weight > 0 ? Math.round((weight * 45) + 30).toString() : "0";
       
-      // Calculate RGS Unloading Charge if applicable
-      let unloading = "0";
-      let weighbridge = tripForm.weighbridgeCharge;
-
-      if (value === "RGS") {
-        const weight = Number(tripForm.netWeight) || 0;
-        unloading = ((45 * weight) + 30).toString();
-        weighbridge = "130"; // Reset to 130 for RGS
-      }
-
-      setTripForm({ 
-        ...tripForm, 
-        to: value, 
-        rate: selectedObj ? selectedObj.rate : 0,
-        unloadingCharge: unloading,
-        weighbridgeCharge: weighbridge
-      });
+      // Maize rule: if load is Maize, weighbridge is 0, else 130
+      weighbridge = tripForm.loadType === "Maize" ? "0" : "130";
+    } else {
+      // Standard behavior for other destinations
+      weighbridge = tripForm.loadType === "Maize" ? "0" : "130";
+      unloading = "0"; 
     }
-    setErrors(prev => prev.filter(err => err !== 'to'));
-  };
+
+    setTripForm({ 
+      ...tripForm, 
+      to: value, 
+      rate: selectedObj ? selectedObj.rate : 0,
+      unloadingCharge: unloading,
+      weighbridgeCharge: weighbridge
+    });
+  }
+  setErrors(prev => prev.filter(err => err !== 'to'));
+};
 
 const handleInputChange = (field: string, value: string) => {
-    let updatedForm = { ...tripForm, [field]: value };
+  let updatedForm = { ...tripForm, [field]: value };
 
-    // 1. MAIZE LOGIC: If load type is Maize, set weighbridge to 0
-    if (field === 'loadType' && value === "Maize") {
-      updatedForm.weighbridgeCharge = "0";
-    }
+// Inside handleInputChange, update the if condition (around line 785)
+if (field === 'netWeight') {
+  const specialDestinations = ["RGS", "Perundurai-41", "Perundurai-42", "Perundurai-43", "Perundurai-KK8"];
+  if (specialDestinations.includes(updatedForm.to)) {
+    const weight = Number(value) || 0;
+    updatedForm.unloadingCharge = Math.round((weight * 45) + 30).toString();
+  }
+}
 
-    // 2. RGS LOGIC: Recalculate Unloading if weight changes while at RGS
-    if (field === 'netWeight' && updatedForm.to === "RGS") {
-      const weight = Number(value) || 0;
-      updatedForm.unloadingCharge = ((45 * weight) + 30).toString();
-      updatedForm.weighbridgeCharge = "130";
-    }
 
-    // 3. RESET LOGIC: If Bill No is set to '0'
-    if (field === 'billNo' && value === '0') {
-      setIsCustomContractor(false);
-      setIsCustomLoad(false);
-      setIsCustomDestination(false);
+  // --- AUTO-CALCULATE RGS UNLOADING WHEN WEIGHT CHANGES ---
+  if (field === 'netWeight' && updatedForm.to === 'RGS') {
+    const weight = Number(value) || 0;
+    updatedForm.unloadingCharge = Math.round((45 * weight) + 30).toString();
+  }
 
+  // --- REST OF YOUR EXISTING LOGIC ---
+  if (field === 'billNo') {
+    if (value === '0') {
       updatedForm = {
         ...updatedForm,
-        contractor: '',
-        loadType: '',
-        to: '', 
-        netWeight: '', 
-        expense: '0',
-        rate: 0,
-        tripTotal: 0,
-        loadingCharge: '500', // Default stays 500 but remains editable
+        contractor: '', loadType: '', to: '', netWeight: '', expense: '0',
+        rate: 0, tripTotal: 0, 
+        loadingCharge: '0',
         unloadingCharge: '0',
-        weighbridgeCharge: '130',
-        dieselPrice: '0',
-        dieselLiters: '0',
-        driverTripPay: 0,
-        advance: '0'
+        weighbridgeCharge: '0', 
+        dieselPrice: '0', dieselLiters: '0',
+        driverTripPay: 0, advance: '0'
       };
+    } else if (value !== '' && tripForm.billNo === '0') {
+      updatedForm.loadingCharge = '500';
+      updatedForm.weighbridgeCharge = '130';
     }
+  }
 
-    setTripForm(updatedForm);
-    setErrors(prev => prev.filter(err => err !== field));
-  };
+  setTripForm(updatedForm);
+  setErrors(prev => prev.filter(err => err !== field));
+};
 
   const handleSaveTrip = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -935,7 +990,7 @@ const handleInputChange = (field: string, value: string) => {
     const totalExpenses = safeLoading + safeUnloading + safeWeighbridge + safeExtraExp;
 
     // NEW FORMULA: Gross Pay - Advance - Total Expenses
-    const finalPay = grossPay - safeAdvance - totalExpenses;
+    const finalPay = grossPay - (safeAdvance - totalExpenses);
 
     const currentVehicle = vehicles.find((v: any) => v.id === activeModal?.vehicleId);
     const currentDriver = drivers.find((d: any) => d.name === tripForm.driverName);
@@ -1138,13 +1193,12 @@ const handleInputChange = (field: string, value: string) => {
                  <div></div>
               </div>
 
-              <h4 className="font-bold text-xs text-blue-600 uppercase mt-2">Fuels</h4>
-              <div className="grid grid-cols-2 gap-3">
-                 <Input label="Diesel Liters" value={tripForm.dieselLiters} onChange={(e) => handleInputChange('dieselLiters', e.target.value)} error={errors.includes('dieselLiters')} />
-                 <Input label="Fuel Price" type="number" value={tripForm.dieselPrice} onChange={(e) => handleInputChange('dieselPrice', e.target.value)} error={errors.includes('dieselPrice')} />
-              </div>
+             
               
               {/* --- LABOUR CHARGES SECTION --- */}
+{/* --- LABOUR CHARGES SECTION --- */}
+{/* --- LABOUR CHARGES --- */}
+{/* --- LABOUR CHARGES SECTION --- */}
 <h4 className="font-bold text-xs text-blue-600 uppercase mt-2">Labour Charges</h4>
 <div className="grid grid-cols-2 gap-3 bg-slate-50 p-2 rounded border border-slate-100">
   <Input 
@@ -1152,32 +1206,28 @@ const handleInputChange = (field: string, value: string) => {
     type="number" 
     value={tripForm.loadingCharge} 
     onChange={(e) => handleInputChange('loadingCharge', e.target.value)} 
-    error={errors.includes('loadingCharge')} 
   />
   <Input 
     label="Unloading Charge *" 
     type="number" 
     value={tripForm.unloadingCharge} 
     onChange={(e) => handleInputChange('unloadingCharge', e.target.value)} 
-    error={errors.includes('unloadingCharge')} 
   />
 </div>
 
-{/* --- FUELS SECTION (Now moved below Labour) --- */}
+{/* --- FUELS (Kept below Labour Charges) --- */}
 <h4 className="font-bold text-xs text-blue-600 uppercase mt-4">Fuels</h4>
 <div className="grid grid-cols-2 gap-3">
   <Input 
     label="Diesel Liters" 
     value={tripForm.dieselLiters} 
     onChange={(e) => handleInputChange('dieselLiters', e.target.value)} 
-    error={errors.includes('dieselLiters')} 
   />
   <Input 
     label="Fuel Price" 
     type="number" 
     value={tripForm.dieselPrice} 
     onChange={(e) => handleInputChange('dieselPrice', e.target.value)} 
-    error={errors.includes('dieselPrice')} 
   />
 </div>
               <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mt-2">
@@ -1218,41 +1268,32 @@ const handleInputChange = (field: string, value: string) => {
       {/* ADD LORRY MODAL */}
       {isAdding && (
         <ModalWrapper title="Add New Lorry" onClose={() => setIsAdding(false)}>
-           <form onSubmit={handleAddLorry} className="space-y-4 pr-2">
-              <h4 className="font-bold text-slate-700 text-sm border-b pb-1 mb-2">Basic Details</h4>
-              <div className="grid grid-cols-2 gap-3">
-                 <Input label="Reg Number" value={form.reg} onChange={(e) => setForm({...form, reg: e.target.value})} required uppercase />
-                 <Input label="Model" value={form.model} onChange={(e) => setForm({...form, model: e.target.value})} />
-              </div>
-            
+           {/* Replace the Add Lorry form contents with this */}
+<form onSubmit={handleAddLorry} className="space-y-4 pr-2">
+  <h4 className="font-bold text-slate-700 text-sm border-b pb-1 mb-2">Identification</h4>
+  <div className="grid grid-cols-2 gap-3">
+    <Input label="Reg Number" value={form.reg} onChange={(e) => setForm({...form, reg: e.target.value})} required uppercase />
+    <Input label="Model" value={form.model} onChange={(e) => setForm({...form, model: e.target.value})} />
+  </div>
+  <div className="grid grid-cols-2 gap-3">
+    <Input label="Engine Number" value={form.engineNo} onChange={(e) => setForm({...form, engineNo: e.target.value})} />
+    <Input label="Chassis Number" value={form.chassisNo} onChange={(e) => setForm({...form, chassisNo: e.target.value})} />
+  </div>
 
-              <h4 className="font-bold text-blue-700 text-sm border-b pb-1 mb-2 mt-4">Insurance Info</h4>
-              <Input label="Company" value={form.insuranceCompany} onChange={(e) => setForm({...form, insuranceCompany: e.target.value})} />
-              <div className="grid grid-cols-2 gap-3">
-                 <Input label="Policy No" value={form.insurancePolicyNo} onChange={(e) => setForm({...form, insurancePolicyNo: e.target.value})} />
-                 <Input label="Valid Upto" type="date" value={form.insuranceValidUpto} onChange={(e) => setForm({...form, insuranceValidUpto: e.target.value})} />
-              </div>
+  <h4 className="font-bold text-blue-700 text-sm border-b pb-1 mb-2 mt-4">Taxes & Permits</h4>
+  <div className="grid grid-cols-2 gap-3">
+    <Input label="Road Tax Upto" type="date" value={form.roadTaxValidUpto} onChange={(e) => setForm({...form, roadTaxValidUpto: e.target.value})} />
+    <Input label="Green Tax Upto" type="date" value={form.greenTaxValidUpto} onChange={(e) => setForm({...form, greenTaxValidUpto: e.target.value})} />
+  </div>
+  <div className="grid grid-cols-2 gap-3">
+    <Input label="Fitness Valid Upto" type="date" value={form.fitnessValidUpto} onChange={(e) => setForm({...form, fitnessValidUpto: e.target.value})} />
+    <Input label="Permit Valid Upto" type="date" value={form.permitValidUpto} onChange={(e) => setForm({...form, permitValidUpto: e.target.value})} />
+  </div>
 
-              <h4 className="font-bold text-green-700 text-sm border-b pb-1 mb-2 mt-4">Compliance (FC / PUCC)</h4>
-              <Input label="Fitness Valid Upto" type="date" value={form.fitnessValidUpto} onChange={(e) => setForm({...form, fitnessValidUpto: e.target.value})} />
-              <div className="grid grid-cols-2 gap-3">
-                 <Input label="PUCC No" value={form.puccNo} onChange={(e) => setForm({...form, puccNo: e.target.value})} />
-                 <Input label="PUCC Valid Upto" type="date" value={form.puccValidUpto} onChange={(e) => setForm({...form, puccValidUpto: e.target.value})} />
-              </div>
-
-              <h4 className="font-bold text-purple-700 text-sm border-b pb-1 mb-2 mt-4">Permits & Reg</h4>
-              <Input label="Registering Authority" value={form.registeringAuthority} onChange={(e) => setForm({...form, registeringAuthority: e.target.value})} />
-              <div className="grid grid-cols-2 gap-3">
-                 <Input label="Permit Valid Upto" type="date" value={form.permitValidUpto} onChange={(e) => setForm({...form, permitValidUpto: e.target.value})} />
-                 <Input label="Green Tax Upto" type="date" value={form.greenTax} onChange={(e) => setForm({...form, greenTax: e.target.value})} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                 <Input label="National Permit No" value={form.nationalPermitNo} onChange={(e) => setForm({...form, nationalPermitNo: e.target.value})} />
-                 <Input label="NP Valid Upto" type="date" value={form.nationalPermitValidUpto} onChange={(e) => setForm({...form, nationalPermitValidUpto: e.target.value})} />
-              </div>
-
-              <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold mt-4 shadow-md hover:bg-blue-700">Save Vehicle to Database</button>
-           </form>
+  <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold mt-4 shadow-md hover:bg-blue-700">
+    Save Vehicle to Database
+  </button>
+</form>
         </ModalWrapper>
       )}
     </div>
@@ -1551,30 +1592,29 @@ const TripsView = ({ trips, handleFilterSelect, handleDeleteTrip }: any) => {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
         <table className="w-full text-sm text-left">
           <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs whitespace-nowrap">
-            <tr>
-              <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3">Bill No</th>
-              <th className="px-4 py-3 border-l border-r border-slate-200 bg-slate-100">Vehicle</th>
-              <th className="px-4 py-3">Driver</th>
-              <th className="px-4 py-3">Route</th>
-              <th className="px-4 py-3">Contractor</th>
-              <th className="px-4 py-3">Load</th>
-              <th className="px-4 py-3">Net Wt</th>
-              <th className="px-4 py-3">Rate</th>
-              <th className="px-4 py-3 font-extrabold text-blue-700 bg-blue-50">Total Rent</th>
-              <th className="px-4 py-3 text-blue-600">Advance</th>
-              {/* 1. MOVED EXPENSE HEADER HERE */}
-              <th className="px-4 py-3 bg-indigo-50/30 font-mono">Expense</th>
-              <th className="px-4 py-3">Load/Unload</th>
-              <th className="px-4 py-3 bg-orange-50 text-orange-700">Diesel Liter</th>
-              <th className="px-4 py-3 bg-orange-50 text-orange-700">Fuel Price</th>
-              <th className="px-4 py-3">Weighbridge</th>
-              <th className="px-4 py-3">Dr. Pay</th>
-              <th className="px-4 py-3 font-extrabold text-red-700 bg-red-50">Total Expense</th>
-              <th className="px-4 py-3 font-extrabold text-slate-700 bg-slate-50 text-right">Profit</th>
-              <th className="px-4 py-3 text-center">Action</th>
-            </tr>
-          </thead>
+  <tr>
+    <th className="px-4 py-3">Date</th>
+    <th className="px-4 py-3">Bill No</th>
+    <th className="px-4 py-3 border-l border-r border-slate-200 bg-slate-100">Vehicle</th>
+    <th className="px-4 py-3">Driver</th>
+    <th className="px-4 py-3">Route</th>
+    <th className="px-4 py-3">Contractor</th>
+    <th className="px-4 py-3">Load</th>
+    <th className="px-4 py-3">Net Wt</th>
+    <th className="px-4 py-3">Rate</th>
+    <th className="px-4 py-3 font-extrabold text-blue-700 bg-blue-50">Total Rent</th>
+    <th className="px-4 py-3 text-blue-600">Advance</th>
+    <th className="px-4 py-3 bg-indigo-50/30 font-mono">Expense</th>
+    <th className="px-4 py-3">Load/Unload</th>
+    <th className="px-4 py-3 bg-orange-50 text-orange-700">Diesel Liter</th>
+    <th className="px-4 py-3 bg-orange-50 text-orange-700">Fuel Price</th>
+    <th className="px-4 py-3">Weighbridge</th>
+    <th className="px-4 py-3">Dr. Pay</th>
+    <th className="px-4 py-3 font-extrabold text-red-700 bg-red-50">Total Expense</th>
+    <th className="px-4 py-3 font-extrabold text-slate-700 bg-slate-50 text-right">Profit</th>
+    <th className="px-4 py-3 text-center">Action</th>
+  </tr>
+</thead>
           <tbody className="divide-y divide-slate-100 whitespace-nowrap">
   {filteredTrips.length === 0 ? (
     <tr><td colSpan={20} className="p-6 text-center text-slate-400">No trips recorded for this period.</td></tr>
@@ -1589,6 +1629,7 @@ const TripsView = ({ trips, handleFilterSelect, handleDeleteTrip }: any) => {
         Number(trip.expense || 0);
 
       const profit = (Number(trip.tripTotal) || 0) - totalExpense;
+      
       return (
         <tr key={`${trip.id}-${index}`} className="hover:bg-slate-50">
           <td className="px-4 py-3">{trip.date}</td>
@@ -1602,8 +1643,7 @@ const TripsView = ({ trips, handleFilterSelect, handleDeleteTrip }: any) => {
           <td className="px-4 py-3">₹{trip.rate}</td>
           <td className="px-4 py-3 font-bold text-blue-700 bg-blue-50/50">₹{(trip.tripTotal || 0).toLocaleString()}</td>
           <td className="px-4 py-3 text-blue-600 font-medium">₹{trip.advance}</td>
-          {/* MOVED EXPENSE HERE */}
-          <td className="px-4 py-3 bg-indigo-50/30 font-mono">₹ {Number(trip.expense || 0).toLocaleString()}</td>
+          <td className="px-4 py-3 bg-indigo-50/30 font-mono">₹{Number(trip.expense || 0).toLocaleString()}</td>
           <td className="px-4 py-3 text-red-500">{trip.loadingCharge} / {trip.unloadingCharge}</td>
           <td className="px-4 py-3 bg-orange-50/30">{trip.dieselLiters} L</td>
           <td className="px-4 py-3 bg-orange-50/30">₹{trip.dieselPrice}</td>
@@ -1612,7 +1652,9 @@ const TripsView = ({ trips, handleFilterSelect, handleDeleteTrip }: any) => {
           <td className="px-4 py-3 font-bold text-red-700 bg-red-50/50">₹{totalExpense.toLocaleString()}</td>
           <td className={`px-4 py-3 font-bold bg-slate-50/50 text-right ${profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>₹{profit.toLocaleString()}</td>
           <td className="px-4 py-3 text-center">
-            <button onClick={() => handleDeleteTrip(trip.id)} className="p-2 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors" title="Delete Trip"><Trash2 size={16} /></button>
+            <button onClick={() => handleDeleteTrip(trip.id)} className="p-2 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors" title="Delete Trip">
+              <Trash2 size={16} />
+            </button>
           </td>
         </tr>
       );
@@ -1832,40 +1874,46 @@ const totalExpenses = Math.round(
             <div className="overflow-x-auto">
             <table className="w-full text-sm text-left border-collapse">
               <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px] whitespace-nowrap">
-                <tr>
-                  <th className="px-3 py-3 border-r border-slate-700">Date</th>
-                  <th className="px-3 py-3 border-r border-slate-700">Bill No</th>
-                  <th className="px-3 py-3 border-r border-slate-700">Vehicle</th>
-                  <th className="px-3 py-3 border-r border-slate-700">Driver</th>
-                  <th className="px-3 py-3 border-r border-slate-700">Route</th>
-                  <th className="px-3 py-3 border-r border-slate-700">Contractor</th>
-                  <th className="px-3 py-3 border-r border-slate-700">Load</th>
-                  <th className="px-3 py-3 border-r border-slate-700">Net Wt</th>
-                  
-                  <th className="px-3 py-3 border-r border-slate-700">Rate</th>
-                  <th className="px-3 py-3 border-r border-slate-700 bg-blue-900 text-blue-200">Total Rent</th>
-                  <th className="px-3 py-3 border-r border-slate-700 text-orange-400">Advance</th>
-                  <th className="px-3 py-3 border-r border-slate-700 text-red-300">Weighbridge</th>
-                  
-                <th className="px-3 py-3 border-r border-slate-700 text-red-300">Expense</th>
+  <tr>
+    <th className="px-4 py-3 w-12 text-center no-print"></th>
+    <th className="px-3 py-3 border-r border-slate-700">Date</th>
+    <th className="px-3 py-3 border-r border-slate-700">Bill No</th>
+    <th className="px-3 py-3 border-r border-slate-700">Vehicle</th>
+    <th className="px-3 py-3 border-r border-slate-700">Driver</th>
+    <th className="px-3 py-3 border-r border-slate-700">Route</th>
+    <th className="px-3 py-3 border-r border-slate-700">Contractor</th>
+    <th className="px-3 py-3 border-r border-slate-700">Load</th>
+    <th className="px-3 py-3 border-r border-slate-700">Net Wt</th>
+    <th className="px-3 py-3 border-r border-slate-700">Rate</th>
+    <th className="px-3 py-3 border-r border-slate-700 bg-blue-900 text-blue-200">Total Rent</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-orange-400">Advance</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-red-300">Weighbridge</th>
+    
+    {/* Reordered columns start here */}
+    <th className="px-3 py-3 border-r border-slate-700 text-red-300">Loading</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-red-300">Unloading</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-red-300 bg-red-900/30">Extra Exp</th> 
+    {/* Reordered columns end here */}
 
-<th className="px-3 py-3 border-r border-slate-700 text-red-300">Loading</th>
-<th className="px-3 py-3 border-r border-slate-700 text-red-300">Unloading</th>
-
-                  <th className="px-3 py-3 border-r border-slate-700 text-green-300">Dr Pay</th>
-                  <th className="px-3 py-3 border-r border-slate-700 text-orange-300">Diesel Liter</th>
-                  <th className="px-3 py-3 border-r border-slate-700 text-orange-300">Fuel Price</th>
-                  <th className="px-3 py-3 border-r border-slate-700 bg-red-900 text-red-200">Total Exp</th>
-                  <th className="px-3 py-3 border-r border-slate-700 bg-emerald-900 text-emerald-200">Profit</th>
-                  <th className="px-2 py-3 text-center no-print">Del</th>
-                </tr>
-              </thead>
+    <th className="px-3 py-3 border-r border-slate-700 text-green-300">Dr Pay</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-orange-300">Diesel Liter</th>
+    <th className="px-3 py-3 border-r border-slate-700 text-orange-300">Fuel Price</th>
+    <th className="px-3 py-3 border-r border-slate-700 bg-red-900 text-red-200">Total Exp</th>
+    <th className="px-3 py-3 border-r border-slate-700 bg-emerald-900 text-emerald-200">Profit</th>
+    <th className="px-2 py-3 text-center no-print">Del</th>
+  </tr>
+</thead>
               <tbody className="divide-y divide-slate-100 text-xs font-medium whitespace-nowrap">
   {filteredTrips.length === 0 ? (
-    <tr><td colSpan={20} className="p-8 text-center text-slate-400">No records found for this period.</td></tr>
+    <tr>
+      <td colSpan={22} className="p-8 text-center text-slate-400">No records found for this period.</td>
+    </tr>
   ) : (
     filteredTrips.map((trip: TripRecord, index: number) => {
+      // --- 1. DEFINE VARIABLES BEFORE USE ---
       const drPay = Math.round(Number(trip.driverTripPay) || 0);
+      const tripTotal = Math.round(Number(trip.tripTotal) || 0);
+      
       const tripExpense = Math.round(
         (Number(trip.loadingCharge) || 0) +
         (Number(trip.unloadingCharge) || 0) +
@@ -1875,11 +1923,12 @@ const totalExpenses = Math.round(
         (Number(trip.expense) || 0)
       );
 
-      const tripTotal = Math.round(Number(trip.tripTotal) || 0);
       const tripProfit = tripTotal - tripExpense;
 
+      // --- 2. RENDER THE ROW ---
       return (
         <tr key={`${trip.id}-${index}`} className="hover:bg-blue-50 transition-colors">
+          <td className="px-4 py-2 no-print"></td>
           <td className="px-3 py-2 border-r border-slate-50">{trip.date}</td>
           <td className="px-3 py-2 border-r border-slate-50 font-mono text-slate-500">{trip.billNo}</td>
           <td className="px-3 py-2 border-r border-slate-50 font-bold text-slate-700">{trip.regNumber}</td>
@@ -1888,31 +1937,43 @@ const totalExpenses = Math.round(
           <td className="px-3 py-2 border-r border-slate-50">{trip.contractor}</td>
           <td className="px-3 py-2 border-r border-slate-50">{trip.loadType}</td>
           <td className="px-3 py-2 border-r border-slate-50 font-bold">{trip.netWeight}</td>
-
           <td className="px-3 py-2 border-r border-slate-50">₹{trip.rate}</td>
-          <td className="px-3 py-2 border-r border-slate-50 font-bold text-blue-700 bg-blue-50/50">₹{tripTotal.toLocaleString()}</td>
+          
+          {/* Use defined tripTotal */}
+          <td className="px-3 py-2 border-r border-slate-50 font-bold text-blue-700 bg-blue-50/50">
+            ₹{tripTotal.toLocaleString()}
+          </td>
+          
           <td className="px-3 py-2 border-r border-slate-50 text-right text-orange-600 font-semibold">₹{trip.advance}</td>
           <td className="px-3 py-2 border-r border-slate-50 text-right text-slate-600">₹{trip.weighbridgeCharge}</td>
+          
+          {/* Expense Section Reordered */}
+          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-500 font-bold">₹{Number(trip.loadingCharge || 0).toLocaleString()}</td>
+          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-500 font-bold">₹{Number(trip.unloadingCharge || 0).toLocaleString()}</td>
+          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-600 font-bold bg-red-50/50">₹{Number(trip.expense || 0).toLocaleString()}</td>
 
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-600 font-bold">
-            ₹{Number(trip.expense || 0).toLocaleString()}
+          {/* Use defined drPay */}
+          <td className="px-3 py-2 border-r border-slate-50 text-right text-green-600 font-bold bg-green-50/30">
+            ₹{drPay.toLocaleString()}
           </td>
-
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-500 font-bold">
-            ₹{Number(trip.loadingCharge || 0).toLocaleString()}
-          </td>
-
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-500 font-bold">
-            ₹{Number(trip.unloadingCharge || 0).toLocaleString()}
-          </td>
-
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-green-600 font-bold bg-green-50/30">₹{drPay.toLocaleString()}</td>
+          
           <td className="px-3 py-2 border-r border-slate-50 text-right text-slate-600">{trip.dieselLiters} L</td>
           <td className="px-3 py-2 border-r border-slate-50 text-right text-orange-600">₹{trip.dieselPrice}</td>
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-600 font-bold bg-red-50/30">₹{tripExpense.toLocaleString()}</td>
-          <td className={`px-3 py-2 text-right font-extrabold ${tripProfit >= 0 ? 'text-emerald-600 bg-emerald-50/50' : 'text-red-600 bg-red-50/50'}`}>₹{tripProfit.toLocaleString()}</td>
+          
+          {/* Use defined tripExpense */}
+          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-600 font-bold bg-red-50/30">
+            ₹{tripExpense.toLocaleString()}
+          </td>
+          
+          {/* Use defined tripProfit */}
+          <td className={`px-3 py-2 text-right font-extrabold ${tripProfit >= 0 ? 'text-emerald-600 bg-emerald-50/50' : 'text-red-600 bg-red-50/50'}`}>
+            ₹{tripProfit.toLocaleString()}
+          </td>
+          
           <td className="px-2 py-3 text-center no-print">
-            <button onClick={() => handleDeleteTrip(trip.id)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-all"><Trash2 size={14}/></button>
+            <button onClick={() => handleDeleteTrip(trip.id)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-all">
+              <Trash2 size={14}/>
+            </button>
           </td>
         </tr>
       );
@@ -1929,6 +1990,19 @@ const totalExpenses = Math.round(
 
 const HistoryView = ({ historyLogs, setHistoryLogs, setTrips, setDrivers, drivers }: any) => {
   const driversGlobal = drivers;
+  // Add this inside the HistoryView component (above the return statement)
+const handleDeleteSettlement = async (logId: number) => {
+  if (!confirm("⚠️ Are you sure you want to delete this settlement record?\n\nThis will NOT restore the trips or change driver balances. It only removes the history log.")) return;
+
+  const { error } = await supabase.from('settlements').delete().eq('id', logId);
+
+  if (error) {
+    alert("Error deleting history: " + error.message);
+  } else {
+    setHistoryLogs((prev: any[]) => prev.filter(h => h.id !== logId));
+    alert("Settlement record deleted.");
+  }
+};
 // In HistoryView component, update the handleRetrieveSettlement function:
 const handleRetrieveSettlement = async (log: WeeklyHistory) => {
   if (!confirm(`Retrieve trips for ${log.driverName}? \nThis will restore trips and update wallet.`)) return;
@@ -2094,13 +2168,22 @@ const handleRetrieveSettlement = async (log: WeeklyHistory) => {
                    </div>
 
 
-                   <div className="flex justify-end mb-4">
+                   <div className="flex justify-end items-center gap-3 mb-4">
+  {/* Retrieve Button */}
   <button
-   onClick={() => handleRetrieveSettlement(log)}
-
-    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow flex items-center gap-2"
+    onClick={() => handleRetrieveSettlement(log)}
+    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow flex items-center gap-2 transition-all active:scale-95"
   >
     <RefreshCw size={16}/> Retrieve
+  </button>
+
+  {/* NEW: Delete Button */}
+  <button
+    onClick={() => handleDeleteSettlement(log.id)}
+    className="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg border border-red-200 transition-all active:scale-95"
+    title="Delete History Record"
+  >
+    <Trash2 size={18}/>
   </button>
 </div>
 
@@ -2235,17 +2318,91 @@ const ModalWrapper = ({ title, children, onClose, headerContent }: any) => (
   </div>
 );
 
-const DetailsModal = ({ data, onClose }: { data: Vehicle, onClose: () => void }) => {
-  const details = data.vehicleDetails;
+const DetailsModal = ({ data, onClose, setVehicles }: any) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState(data.vehicleDetails);
+
+  const handleUpdate = async () => {
+    const { error } = await supabase
+      .from('vehicles')
+      .update({ details: editForm })
+      .eq('id', data.id);
+
+    if (error) {
+      alert("Update failed: " + error.message);
+    } else {
+      setVehicles((prev: any) => prev.map((v: any) => v.id === data.id ? { ...v, vehicleDetails: editForm } : v));
+      setIsEditing(false);
+      alert("Vehicle updated successfully!");
+    }
+  };
+
+  const renderField = (label: string, key: string, type = "text") => (
+    <div>
+      <span className="text-slate-500 font-semibold block text-[10px] uppercase">{label}</span>
+      {isEditing ? (
+        <input 
+          type={type} 
+          className="w-full border rounded p-1 text-sm bg-white" 
+          value={editForm[key] || ''} 
+          onChange={(e) => setEditForm({ ...editForm, [key]: e.target.value })} 
+        />
+      ) : (
+        <span className="text-slate-800 font-medium">{editForm[key] || 'N/A'}</span>
+      )}
+    </div>
+  );
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-3xl rounded-xl shadow-2xl animate-in zoom-in-95 overflow-hidden">
-        <div className="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50"><div><h3 className="font-bold text-lg text-slate-800">{data.regNumber} - Vehicle Details</h3><p className="text-xs text-slate-500">Complete vehicle information</p></div><button onClick={onClose}><X size={20} className="text-slate-400 hover:text-red-500"/></button></div>
-        <div className="p-6 max-h-[70vh] overflow-y-auto space-y-4">
-          <div className="bg-slate-50 rounded-lg p-4 space-y-3"><h4 className="font-bold text-slate-700 flex items-center gap-2"><Truck size={16}/> Basic Information</h4><div className="grid grid-cols-2 gap-3 text-sm"><div><span className="text-slate-500 font-semibold">Model:</span> <span className="text-slate-800">{details.model}</span></div><div><span className="text-slate-500 font-semibold">Type:</span> <span className="text-slate-800">{details.type}</span></div><div><span className="text-slate-500 font-semibold">Fuel Type:</span> <span className="text-slate-800">{details.fuelType}</span></div><div><span className="text-slate-500 font-semibold">Emission Norm:</span> <span className="text-slate-800">{details.emissionNorm}</span></div><div><span className="text-slate-500 font-semibold">Color:</span> <span className="text-slate-800 flex items-center gap-2"><Palette size={14}/>{details.color}</span></div><div><span className="text-slate-500 font-semibold">Seat Capacity:</span> <span className="text-slate-800">{details.seatCapacity}</span></div></div></div>
-          <div className="bg-blue-50 rounded-lg p-4 space-y-3"><h4 className="font-bold text-blue-700 flex items-center gap-2"><ShieldCheck size={16}/> Insurance Details</h4><div className="grid grid-cols-2 gap-3 text-sm"><div><span className="text-slate-500 font-semibold">Company:</span> <span className="text-slate-800">{details.insuranceCompany}</span></div><div><span className="text-slate-500 font-semibold">Policy No:</span> <span className="text-slate-800">{details.insurancePolicyNo}</span></div><div><span className="text-slate-500 font-semibold">Valid Upto:</span> <span className="text-slate-800 flex items-center gap-1"><CalendarDays size={14}/>{details.insuranceValidUpto}</span></div></div></div>
-          <div className="bg-green-50 rounded-lg p-4 space-y-3"><h4 className="font-bold text-green-700 flex items-center gap-2"><FileCheck size={16}/> Compliance & Permits</h4><div className="grid grid-cols-2 gap-3 text-sm"><div><span className="text-slate-500 font-semibold">Fitness Valid Upto:</span> <span className="text-slate-800">{details.fitnessValidUpto}</span></div><div><span className="text-slate-500 font-semibold">PUCC No:</span> <span className="text-slate-800">{details.puccNo}</span></div><div><span className="text-slate-500 font-semibold">PUCC Valid Upto:</span> <span className="text-slate-800">{details.puccValidUpto}</span></div><div><span className="text-slate-500 font-semibold">Permit Valid Upto:</span> <span className="text-slate-800">{details.permitValidUpto}</span></div><div><span className="text-slate-500 font-semibold">National Permit No:</span> <span className="text-slate-800">{details.nationalPermitNo}</span></div><div><span className="text-slate-500 font-semibold">National Permit Valid:</span> <span className="text-slate-800">{details.nationalPermitValidUpto}</span></div></div></div>
-          <div className="bg-purple-50 rounded-lg p-4 space-y-3"><h4 className="font-bold text-purple-700 flex items-center gap-2"><Building2 size={16}/> Registration & Tax</h4><div className="grid grid-cols-2 gap-3 text-sm"><div><span className="text-slate-500 font-semibold">Registering Authority:</span> <span className="text-slate-800">{details.registeringAuthority}</span></div><div><span className="text-slate-500 font-semibold">Green Tax:</span> <span className="text-slate-800 flex items-center gap-1"><Leaf size={14}/>{details.greenTax}</span></div></div></div>
+      <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl animate-in zoom-in-95 overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="flex justify-between items-center p-5 border-b bg-slate-50">
+          <div>
+            <h3 className="font-bold text-lg text-slate-800">{data.regNumber}</h3>
+            <p className="text-xs text-slate-500">Technical & Compliance Records</p>
+          </div>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => isEditing ? handleUpdate() : setIsEditing(true)}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all ${isEditing ? 'bg-green-600 text-white' : 'bg-blue-100 text-blue-700'}`}
+            >
+              {isEditing ? 'SAVE CHANGES' : 'EDIT DETAILS'}
+            </button>
+            <button onClick={onClose} className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded"><X size={20}/></button>
+          </div>
+        </div>
+
+        <div className="p-6 overflow-y-auto space-y-6">
+          {/* IDENTIFICATION */}
+          <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+            {renderField("Model", "model")}
+            {renderField("Engine Number", "engineNo")}
+            {renderField("Chassis Number", "chassisNo")}
+            {renderField("Registering Authority", "registeringAuthority")}
+          </div>
+
+          {/* COMPLIANCE */}
+          <div className="space-y-4">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Validity Dates</h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {renderField("Insurance Valid", "insuranceValidUpto", "date")}
+              {renderField("Fitness (FC)", "fitnessValidUpto", "date")}
+              {renderField("Road Tax", "roadTaxValidUpto", "date")}
+              {renderField("Green Tax", "greenTaxValidUpto", "date")}
+              {renderField("PUCC Valid", "puccValidUpto", "date")}
+              {renderField("Permit Valid", "permitValidUpto", "date")}
+            </div>
+          </div>
+          
+          <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+             <h4 className="text-xs font-bold text-blue-700 uppercase mb-3">Insurance & National Permit</h4>
+             <div className="grid grid-cols-2 gap-4">
+               {renderField("Insurance Co.", "insuranceCompany")}
+               {renderField("Policy No.", "insurancePolicyNo")}
+               {renderField("NP Number", "nationalPermitNo")}
+               {renderField("NP Valid Upto", "nationalPermitValidUpto", "date")}
+             </div>
+          </div>
         </div>
       </div>
     </div>
@@ -2281,7 +2438,7 @@ const mapped = data.map((t: any) => {
   const driverPay = Math.round(Number(t.driver_trip_pay) || 0);
   
   // NEW FORMULA: Advance - Total Expenses - Gross Pay
-  const calculatedNet = Math.round(advance - totalExpenses - driverPay);
+  const calculatedNet = Math.round(driverPay - (advance - totalExpenses));
 
           return {
             ...t,
@@ -2327,8 +2484,16 @@ const mapped = data.map((t: any) => {
   const totalExpenses = Math.round(totalExtraExpense + totalLoadingCharge + totalUnloadingCharge + totalWeighbridgeCharge);
 
   // --- 4. DYNAMIC BALANCE ---
-  const selectedTripsSum = Math.round(filteredHistory.filter(t => selectedTripIds.size === 0 || selectedTripIds.has(t.id)).reduce((sum, t) => sum + t.netAmount, 0));
-  const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
+  // --- 4. DYNAMIC BALANCE ---
+// Change this line:
+// Inside DriverDetailsModal component body
+const selectedTripsSum = Math.round(filteredHistory
+  .filter(t => selectedTripIds.size === 0 || selectedTripIds.has(t.id))
+  .reduce((sum, t) => sum + t.netAmount, 0) 
+);
+
+// This is the value displayed at the very top
+const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
 
   // --- 5. HANDLERS ---
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2382,8 +2547,14 @@ const mapped = data.map((t: any) => {
   const handleSettle = async () => {
     if (submitting) return;
     const tripsToSettle = filteredHistory.filter(t => selectedTripIds.has(t.id));
-    const tripNetSum = Math.round(tripsToSettle.reduce((sum, t) => sum + t.netAmount, 0));
+    
+    // UPDATE THIS LINE HERE:
+    const tripNetSum = Math.round(tripsToSettle.reduce((sum, t) => 
+        sum + (t.driverTripPay - (t.advance - t.totalExpenses)), 0)
+    );
+    
     const totalDue = Math.round(localWalletBalance + tripNetSum);
+    // ... rest of the function remains the same
     const paid = Math.round(parseFloat(payAmount) || 0);
     const newBalance = Math.round(totalDue - paid);
 
@@ -2547,6 +2718,7 @@ const mapped = data.map((t: any) => {
 
         <div id="driver-print-area" className="flex-1 overflow-auto bg-slate-50/50 p-6">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+              
     {/* 1. Total Advances */}
     <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
         <div className="text-xs font-bold text-slate-400 uppercase">Total Advances</div>
@@ -2572,98 +2744,107 @@ const mapped = data.map((t: any) => {
     </div>
 
     {/* 5. Net Added (Result of New Formula) */}
-    <div className="bg-white p-4 rounded-xl border-l-4 border-l-indigo-600 shadow-md">
-        <div className="text-xs font-bold text-slate-400 uppercase">Net Added</div>
-        <div className={`text-2xl font-bold ${calculatedNetAdded >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>
-          ₹ {calculatedNetAdded.toLocaleString()}
-        </div>
+    {/* 5. Net Added (Result of New Formula) */}
+<div className="bg-white p-4 rounded-xl border-l-4 border-l-indigo-600 shadow-md">
+    <div className="text-xs font-bold text-slate-400 uppercase">Net Added</div>
+    <div className={`text-2xl font-bold ${selectedTripsSum >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+      ₹ {selectedTripsSum.toLocaleString()}
     </div>
 </div>
+</div>
 
-            <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${submitting ? 'opacity-60 pointer-events-none select-none' : ''}`}>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px]">
-    <tr>
-        <th className="px-4 py-3 w-12 text-center">{/* Checkbox Header */}</th>
-        <th className="px-4 py-3">Date</th>
-        <th className="px-4 py-3">Route</th>
-        <th className="px-4 py-3 text-right">Rent</th>
-        <th className="px-4 py-3 text-right text-orange-400">Advance</th>
-        
-        {/* MOVED EXTRA EXPENSE NEXT TO ADVANCE/WEIGHT AREA */}
-        <th className="px-4 py-3 text-right text-red-400 bg-red-900/30">Extra Exp</th>
-        
-        <th className="px-4 py-3 text-right text-red-400">Loading</th>
-        <th className="px-4 py-3 text-right text-red-400">Unloading</th>
-        <th className="px-4 py-3 text-right text-red-400">Weight</th>
-        <th className="px-4 py-3 text-right text-red-400 bg-red-900/50">Total Exp</th>
-        
-        <th className="px-4 py-3 text-right text-green-400">Dr Pay</th>
-        <th className="px-4 py-3 text-right text-white bg-slate-700">Net</th>
-    </tr>
-</thead>
-                        <tbody className="divide-y divide-slate-100 text-[11px] font-medium">
-    {loading ? (
-      <tr><td colSpan={13} className="p-8 text-center text-slate-400">Loading History...</td></tr>
-    ) : filteredHistory.length === 0 ? (
-      <tr><td colSpan={13} className="p-8 text-center text-slate-400">No active trips found.</td></tr>
-    ) : filteredHistory.map((h, index) => {
-        const isSelected = selectedTripIds.has(h.id);
-        return (
-            <tr 
-              key={`${h.id}-${index}`} 
-              onClick={() => !submitting && handleToggleRow(h.id)} 
-              className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-slate-50'}`}
-            >
-                <td className="px-4 py-3 text-center">
-                  <div className={`flex justify-center ${isSelected ? 'text-indigo-600' : 'text-slate-300'}`}>
-                    {isSelected ? <CheckSquare size={16}/> : <Square size={16}/>}
-                  </div>
-                </td>
-                <td className="px-4 py-3 font-bold text-slate-700">
-                  {h.date}<br/>
-                  <span className="text-slate-400 font-normal">{h.billNo}</span>
-                </td>
-                <td className="px-4 py-3">
-                  {h.from} ➔ {h.to}<br/>
-                  <span className="text-slate-400">{h.loadType}</span>
-                </td>
-                <td className="px-4 py-3 text-right font-bold text-blue-600">₹{h.tripTotal}</td>
-                <td className="px-4 py-3 text-right text-orange-600">₹{h.advance}</td>
-                
-                {/* EXTRA EXPENSE COLUMN */}
-                <td className="px-4 py-3 text-right text-red-500 font-bold bg-red-50/20">₹{h.extraExpense}</td>
-                
-                <td className="px-4 py-3 text-right text-red-500">₹{h.loadingCharge}</td>
-                <td className="px-4 py-3 text-right text-red-500">₹{h.unloadingCharge}</td>
-                <td className="px-4 py-3 text-right text-red-500">₹{h.weighbridgeCharge}</td>
-                <td className="px-4 py-3 text-right text-red-600 font-bold bg-red-50/50">₹{h.totalExpenses}</td>
-                
-                <td className="px-4 py-3 text-right text-green-600 font-bold">₹{h.driverTripPay}</td>
-                <td className={`px-4 py-3 text-right font-bold ${h.netAmount >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                  ₹{h.netAmount}
-                </td>
-            </tr>
-        );
-    })}
-</tbody>
-                        <tfoot className="bg-slate-100 border-t-2 border-slate-300">
-                            <tr className="font-bold text-[10px] uppercase">
-                                <td colSpan={4} className="px-4 py-3 text-right text-slate-700">Page Totals:</td>
-                                <td className="px-4 py-3 text-right text-orange-600">₹{totalAdvance.toLocaleString()}</td>
-                                <td className="px-4 py-3 text-right text-red-600 font-bold">₹{totalExtraExpense.toLocaleString()}</td>
-                                <td className="px-4 py-3 text-right text-red-500">₹{totalLoadingCharge.toLocaleString()}</td>
-                                <td className="px-4 py-3 text-right text-red-500">₹{totalUnloadingCharge.toLocaleString()}</td>
-                                <td className="px-4 py-3 text-right text-red-500">₹{totalWeighbridgeCharge.toLocaleString()}</td>
-                                <td className="px-4 py-3 text-right text-red-700 bg-red-100 font-bold">₹{totalExpenses.toLocaleString()}</td>
-                                <td className="px-4 py-3 text-right text-green-600 font-bold">₹{totalGrossPay.toLocaleString()}</td>
-                                <td className="px-4 py-3 text-right text-slate-800 font-bold">₹{selectedTripsSum.toLocaleString()}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </div>
+ {/* --- UPDATED TABLE IN DRIVER DETAILS MODAL --- */}
+{/* --- UPDATED TABLE IN DRIVER DETAILS MODAL --- */}
+{/* --- UPDATED TABLE IN DRIVER DETAILS MODAL --- */}
+{/* --- UPDATED TABLE IN DRIVER DETAILS MODAL --- */}
+{/* --- UPDATED TABLE IN DRIVER DETAILS MODAL --- */}
+<div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${submitting ? 'opacity-60 pointer-events-none select-none' : ''}`}>
+    <div className="overflow-x-auto">
+        <table className="w-full text-sm text-left">
+            <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px] whitespace-nowrap">
+                <tr>
+                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Route</th> 
+                    <th className="px-4 py-3">Load Type</th>
+                    {/* Displaying Entered Net Weight */}
+                    <th className="px-4 py-3 text-center bg-slate-700 text-white">Net Weight</th>
+                    <th className="px-4 py-3 text-right text-orange-400">Advance</th>
+                    {/* Dedicated Weighbridge Column */}
+                    <th className="px-4 py-3 text-right text-red-300">Weighbridge</th>
+                    <th className="px-4 py-3 text-center">L / U / E</th>
+                    <th className="px-4 py-3 text-right text-green-400">Dr Pay</th>
+                    <th className="px-4 py-3 text-right text-red-400">Total Exp</th>
+                    <th className="px-4 py-3 text-right text-white bg-blue-900">Net Added</th>
+                </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-[11px] font-medium">
+                {loading ? (
+                    <tr><td colSpan={10} className="p-8 text-center text-slate-400">Loading History...</td></tr>
+                ) : filteredHistory.length === 0 ? (
+                    <tr><td colSpan={10} className="p-8 text-center text-slate-400">No active trips found.</td></tr>
+                ) : filteredHistory.map((h, index) => {
+                    const isSelected = selectedTripIds.has(h.id);
+                    const netAddedValue = h.netAmount; 
+
+                    return (
+                        <tr 
+                            key={`${h.id}-${index}`} 
+                            onClick={() => !submitting && handleToggleRow(h.id)} 
+                            className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-slate-50'}`}
+                        >
+                            <td className="px-4 py-3 font-bold text-slate-700">
+                                {h.date}
+                            </td>
+                            <td className="px-4 py-3 text-slate-600">
+                                <div className="flex items-center gap-1">
+                                    <span className="text-slate-400">➔</span> {h.to || "N/A"}
+                                </div>
+                            </td>
+                            <td className="px-4 py-3 font-bold text-slate-800">
+                                {h.loadType}
+                            </td>
+                            {/* THE ENTERED NET WEIGHT COLUMN */}
+<td className="px-4 py-3 text-center">
+    <span className="bg-blue-50 text-blue-700 border border-blue-100 px-2 py-1 rounded-md font-extrabold">
+        {/* Use h.netWeight and handle potential null/undefined */}
+        {h.netWeight || h.net_weight || "0"} T
+    </span>
+</td>
+                            <td className="px-4 py-3 text-right text-orange-600 font-bold">
+                                ₹{h.advance.toLocaleString()}
+                            </td>
+                            {/* SEPARATE WEIGHBRIDGE CHARGE */}
+                            <td className="px-4 py-3 text-right text-red-600 font-bold">
+                                ₹{h.weighbridgeCharge.toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 text-center bg-slate-50/50">
+                                <div className="flex flex-col items-center">
+                                    <div className="font-mono text-slate-700">
+                                        {h.loadingCharge}/{h.unloadingCharge}/<span className="text-red-500 font-bold">{h.extraExpense}</span>
+                                    </div>
+                                    <div className="text-[8px] text-slate-400 uppercase tracking-widest font-bold mt-0.5">
+                                        L / U / E
+                                    </div>
+                                </div>
+                            </td>
+                            <td className="px-4 py-3 text-right text-green-600 font-bold">
+                                ₹{h.driverTripPay.toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 text-right text-red-600 font-bold bg-red-50/30">
+                                ₹{h.totalExpenses.toLocaleString()}
+                            </td>
+                            <td className={`px-4 py-3 text-right font-bold border-l border-slate-100 ${
+                                netAddedValue >= 0 ? 'text-emerald-600 bg-emerald-50/10' : 'text-red-600 bg-red-50/10'
+                            }`}>
+                                ₹{netAddedValue.toLocaleString()}
+                            </td>
+                        </tr>
+                    );
+                })}
+            </tbody>
+        </table>
+    </div>
+</div>
         </div>
       </div>
     </div>
