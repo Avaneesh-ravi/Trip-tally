@@ -984,9 +984,9 @@ if (field === 'netWeight') {
 
   const handleSaveTrip = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return; 
+    if (isSubmitting) return;
     setIsSubmitting(true);
-    
+
     const safeNetWeight = Number(tripForm.netWeight) || 0;
     const safeRate = Number(tripForm.rate) || 0;
     const safeCommissionVal = Number(tripForm.commissionValue) || 0;
@@ -997,7 +997,7 @@ if (field === 'netWeight') {
     const safeExtraExp = Number(tripForm.expense) || 0;
 
     const total = safeNetWeight * safeRate;
-    
+
     // Calculate Gross Pay
     let grossPay = 0;
     if (tripForm.commissionType === 'percentage') {
@@ -1009,145 +1009,111 @@ if (field === 'netWeight') {
     // Combined Expenses
     const totalExpenses = safeLoading + safeUnloading + safeWeighbridge + safeExtraExp;
 
-    // NEW FORMULA: Gross Pay - Advance - Total Expenses
+    // NEW FORMULA: Gross Pay - (Advance - Total Expenses)
     const finalPay = grossPay - (safeAdvance - totalExpenses);
 
     const currentVehicle = vehicles.find((v: any) => v.id === activeModal?.vehicleId);
     const currentDriver = drivers.find((d: any) => d.name === tripForm.driverName);
-    
-    if (!currentVehicle || !currentDriver) { 
-      alert("Driver or Vehicle not found!"); 
+
+    if (!currentVehicle || !currentDriver) {
+      alert("Driver or Vehicle not found!");
       setIsSubmitting(false);
-      return; 
+      return;
     }
 
     const dbTrip = {
-        date: tripForm.date, 
-        bill_no: tripForm.billNo, 
-        vehicle_reg: currentVehicle.regNumber, 
-        driver_id: currentDriver.id,
-        user_id: currentUser.id,
-        contractor: tripForm.contractor || null, 
-        load_type: tripForm.loadType || null, 
-        from_loc: tripForm.from, 
-        to_loc: tripForm.to || null,
-        net_weight: safeNetWeight,
-        expense: safeExtraExp,
-        rate: safeRate,
-        trip_total: total,
-        advance: safeAdvance,
-        loading_charge: safeLoading, 
-        unloading_charge: safeUnloading, 
-        weighbridge_charge: safeWeighbridge,
-        diesel_liters: Number(tripForm.dieselLiters) || 0, 
-        diesel_price: Number(tripForm.dieselPrice) || 0, 
-        driver_trip_pay: grossPay, 
-        final_pay: finalPay, // This uses the new formula
-        commission_type: tripForm.commissionType, 
-        commission_value: tripForm.commissionValue,
-        status: 'active'
+      date: tripForm.date,
+      bill_no: tripForm.billNo,
+      vehicle_reg: currentVehicle.regNumber,
+      driver_id: currentDriver.id,
+      user_id: currentUser.id,
+      contractor: tripForm.contractor || null,
+      load_type: tripForm.loadType || null,
+      from_loc: tripForm.from,
+      to_loc: tripForm.to || null,
+      net_weight: safeNetWeight,
+      expense: safeExtraExp,
+      rate: safeRate,
+      trip_total: total,
+      advance: safeAdvance,
+      loading_charge: safeLoading,
+      unloading_charge: safeUnloading,
+      weighbridge_charge: safeWeighbridge,
+      diesel_liters: Number(tripForm.dieselLiters) || 0,
+      diesel_price: Number(tripForm.dieselPrice) || 0,
+      driver_trip_pay: grossPay,
+      final_pay: finalPay,
+      status: 'active',
+      commission_type: tripForm.commissionType,
+      commission_value: tripForm.commissionValue,
     };
-if (editingTripId) {
-      // 1. Get the existing trip before updating to calculate the wallet difference
+
+    if (editingTripId) {
+      // --- EDIT LOGIC ---
       const oldTrip = trips.find((t: TripRecord) => t.id === editingTripId);
-      
+
       if (oldTrip) {
-        // Calculate the old net payout (using your specific formula)
-        const oldLoading = Number(oldTrip.loadingCharge) || 0;
-        const oldUnloading = Number(oldTrip.unloadingCharge) || 0;
-        const oldWeigh = Number(oldTrip.weighbridgeCharge) || 0;
-        const oldExtra = Number(oldTrip.expense) || 0;
-        const oldTotalExp = oldLoading + oldUnloading + oldWeigh + oldExtra;
-        
+        const oldTotalExp = (Number(oldTrip.loadingCharge) || 0) + (Number(oldTrip.unloadingCharge) || 0) + (Number(oldTrip.weighbridgeCharge) || 0) + (Number(oldTrip.expense) || 0);
         const oldNet = (Number(oldTrip.driverTripPay) || 0) - (Number(oldTrip.advance) - oldTotalExp);
-        
-        // finalPay is the NEW net calculated in your function scope earlier
         const walletDelta = finalPay - oldNet;
 
-        // 2. Update the core Trip record
         const { error: updateError } = await supabase.from('trips').update(dbTrip).eq('id', editingTripId);
-        
+
         if (!updateError) {
-          // 3. Sync the Transaction table record (matches by the Bill Number)
+          // Sync Transactions
           await supabase.from('transactions')
-            .update({ 
-              amount: finalPay, 
-              date: tripForm.date 
-            })
+            .update({ amount: finalPay, date: tripForm.date })
             .ilike('description', `%${tripForm.billNo}%`);
 
-          // 4. Update the Driver's Wallet in database via RPC if there's a change
+          // Sync Wallet
           if (walletDelta !== 0) {
-            await supabase.rpc('increment_wallet', { 
-              row_id: currentDriver.id, 
-              amount: walletDelta 
-            });
+            await supabase.rpc('increment_wallet', { row_id: currentDriver.id, amount: walletDelta });
           }
 
-          // 5. Update Local UI States
+          // Local state updates
           setTrips((prev: TripRecord[]) => prev.map(t => t.id === editingTripId ? { ...t, ...dbTrip, driverName: currentDriver.name, tripTotal: total, driverTripPay: grossPay } : t));
-          
           setDrivers((prev: Driver[]) => prev.map(d => d.id === currentDriver.id ? { ...d, walletBalance: d.walletBalance + walletDelta } : d));
-          
-          alert("Trip, Wallet & Finance records updated successfully!");
+
+          alert("Trip Updated Successfully!");
           setActiveModal(null);
         } else {
-          alert("Error updating trip: " + updateError.message);
+          alert("Error: " + updateError.message);
         }
       }
     } else {
-      // --- ORIGINAL INSERT LOGIC FOR NEW TRIPS ---
+      // --- INSERT LOGIC ---
       const { data: newTripData, error: insertError } = await supabase.from('trips').insert([dbTrip]).select().single();
-      
+
       if (!insertError) {
-        // Add record to transactions
+        // Add transaction record
         await supabase.from('transactions').insert([{
-            date: tripForm.date, 
-            time: "12:00", 
-            vehicle_reg: currentVehicle.regNumber,
-            type: 'Expense', 
-            amount: finalPay, 
-            category: 'Driver Payout', 
-            description: `Trip Bill: ${tripForm.billNo}`,
-            user_id: currentUser.id
+          date: tripForm.date,
+          time: "12:00",
+          vehicle_reg: currentVehicle.regNumber,
+          type: 'Expense',
+          amount: finalPay,
+          category: 'Driver Payout',
+          description: `Trip Bill: ${tripForm.billNo}`,
+          user_id: currentUser.id
         }]);
 
-        // Add net amount to driver wallet
+        // Update Wallet
         await supabase.rpc('increment_wallet', { row_id: currentDriver.id, amount: finalPay });
 
         const newTripRecord: TripRecord = {
-            id: newTripData.id,
-            ...dbTrip,
-            driverName: currentDriver.name,
-            regNumber: currentVehicle.regNumber,
-            tripTotal: total,
-            driverTripPay: grossPay,
-            fuelPaidDate: '',
-            creditedAmount: 0
+          id: newTripData.id,
+          ...dbTrip,
+          driverName: currentDriver.name,
+          regNumber: currentVehicle.regNumber,
+          tripTotal: total,
+          driverTripPay: grossPay,
+          fuelPaidDate: '',
+          creditedAmount: 0
         } as any;
 
         setTrips((prev: TripRecord[]) => [newTripRecord, ...prev]);
         setDrivers((prev: Driver[]) => prev.map(d => d.id === currentDriver.id ? { ...d, walletBalance: d.walletBalance + finalPay } : d));
-        
-        alert("New Trip Saved Successfully!");
-        setActiveModal(null);
-      } else {
-        alert("Error saving trip: " + insertError.message);
-      }
-    }
 
-        const newTripRecord: TripRecord = {
-            id: newTripData.id,
-            ...dbTrip,
-            driverName: currentDriver.name,
-            regNumber: currentVehicle.regNumber,
-            tripTotal: total,
-            driverTripPay: grossPay,
-            fuelPaidDate: '',
-            creditedAmount: 0
-        } as any;
-
-        setTrips((prev: TripRecord[]) => [newTripRecord, ...prev]);
         alert("Trip Saved Successfully!");
         setActiveModal(null);
       } else {
