@@ -1047,25 +1047,94 @@ if (field === 'netWeight') {
         commission_value: tripForm.commissionValue,
         status: 'active'
     };
-    if (editingTripId) {
-      const { error: updateError } = await supabase.from('trips').update(dbTrip).eq('id', editingTripId);
+if (editingTripId) {
+      // 1. Get the existing trip before updating to calculate the wallet difference
+      const oldTrip = trips.find((t: TripRecord) => t.id === editingTripId);
       
-      if (!updateError) {
+      if (oldTrip) {
+        // Calculate the old net payout (using your specific formula)
+        const oldLoading = Number(oldTrip.loadingCharge) || 0;
+        const oldUnloading = Number(oldTrip.unloadingCharge) || 0;
+        const oldWeigh = Number(oldTrip.weighbridgeCharge) || 0;
+        const oldExtra = Number(oldTrip.expense) || 0;
+        const oldTotalExp = oldLoading + oldUnloading + oldWeigh + oldExtra;
+        
+        const oldNet = (Number(oldTrip.driverTripPay) || 0) - (Number(oldTrip.advance) - oldTotalExp);
+        
+        // finalPay is the NEW net calculated in your function scope earlier
+        const walletDelta = finalPay - oldNet;
+
+        // 2. Update the core Trip record
+        const { error: updateError } = await supabase.from('trips').update(dbTrip).eq('id', editingTripId);
+        
+        if (!updateError) {
+          // 3. Sync the Transaction table record (matches by the Bill Number)
+          await supabase.from('transactions')
+            .update({ 
+              amount: finalPay, 
+              date: tripForm.date 
+            })
+            .ilike('description', `%${tripForm.billNo}%`);
+
+          // 4. Update the Driver's Wallet in database via RPC if there's a change
+          if (walletDelta !== 0) {
+            await supabase.rpc('increment_wallet', { 
+              row_id: currentDriver.id, 
+              amount: walletDelta 
+            });
+          }
+
+          // 5. Update Local UI States
           setTrips((prev: TripRecord[]) => prev.map(t => t.id === editingTripId ? { ...t, ...dbTrip, driverName: currentDriver.name, tripTotal: total, driverTripPay: grossPay } : t));
-          alert("Trip Updated!");
+          
+          setDrivers((prev: Driver[]) => prev.map(d => d.id === currentDriver.id ? { ...d, walletBalance: d.walletBalance + walletDelta } : d));
+          
+          alert("Trip, Wallet & Finance records updated successfully!");
           setActiveModal(null);
-      } else {
-          alert("Error: " + updateError.message);
+        } else {
+          alert("Error updating trip: " + updateError.message);
+        }
       }
     } else {
+      // --- ORIGINAL INSERT LOGIC FOR NEW TRIPS ---
       const { data: newTripData, error: insertError } = await supabase.from('trips').insert([dbTrip]).select().single();
       
       if (!insertError) {
+        // Add record to transactions
         await supabase.from('transactions').insert([{
-            date: tripForm.date, time: "12:00", vehicle_reg: currentVehicle.regNumber,
-            type: 'Expense', amount: finalPay, category: 'Driver Payout', description: `Trip Bill: ${tripForm.billNo}`,
-            user_id: currentUser.id // ADDED USER ID
+            date: tripForm.date, 
+            time: "12:00", 
+            vehicle_reg: currentVehicle.regNumber,
+            type: 'Expense', 
+            amount: finalPay, 
+            category: 'Driver Payout', 
+            description: `Trip Bill: ${tripForm.billNo}`,
+            user_id: currentUser.id
         }]);
+
+        // Add net amount to driver wallet
+        await supabase.rpc('increment_wallet', { row_id: currentDriver.id, amount: finalPay });
+
+        const newTripRecord: TripRecord = {
+            id: newTripData.id,
+            ...dbTrip,
+            driverName: currentDriver.name,
+            regNumber: currentVehicle.regNumber,
+            tripTotal: total,
+            driverTripPay: grossPay,
+            fuelPaidDate: '',
+            creditedAmount: 0
+        } as any;
+
+        setTrips((prev: TripRecord[]) => [newTripRecord, ...prev]);
+        setDrivers((prev: Driver[]) => prev.map(d => d.id === currentDriver.id ? { ...d, walletBalance: d.walletBalance + finalPay } : d));
+        
+        alert("New Trip Saved Successfully!");
+        setActiveModal(null);
+      } else {
+        alert("Error saving trip: " + insertError.message);
+      }
+    }
 
         const newTripRecord: TripRecord = {
             id: newTripData.id,
@@ -1492,28 +1561,26 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
   );
 };
 
-const FuelView = ({ trips, filterReg, setFilterReg, setTrips }: any) => {
+const FuelView = ({ trips, filterReg, setFilterReg, setTrips, handleFilterSelect }: any) => {
   
-  // 1. FILTER: Exclude Bill No "0" globally for this page
+  // 1. FILTER: Exclude Bill No "0" globally
   const visibleTrips = trips.filter((t: any) => String(t.billNo) !== "0");
 
-  // 2. SORTING
+  // 2. SORTING: Unpaid first, then by date
   const unpaidTrips = visibleTrips.filter((t: any) => !t.fuelPaidDate).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const paidTrips = visibleTrips.filter((t: any) => t.fuelPaidDate).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const sortedTrips = [...unpaidTrips, ...paidTrips];
 
-  // 3. DATE UPDATE FUNCTION
+  // 3. DATE UPDATE FUNCTION (Syncs with Supabase)
   const handleUpdateFuelDate = async (tripId: number, date: string) => {
     const val = date || null;
     const { error } = await supabase.from('trips').update({ fuel_paid_date: val }).eq('id', tripId);
     if(error) {
         alert("Error saving date: " + error.message);
     } else {
-        if(setTrips) {
-            setTrips((prev: any) => prev.map((t: any) => 
-                t.id === tripId ? { ...t, fuelPaidDate: val } : t
-            ));
-        }
+        setTrips((prev: any) => prev.map((t: any) => 
+            t.id === tripId ? { ...t, fuelPaidDate: val } : t
+        ));
     }
   };
 
@@ -1523,61 +1590,105 @@ const FuelView = ({ trips, filterReg, setFilterReg, setTrips }: any) => {
   const remainingPayment = unpaidTrips.reduce((acc: number, t: any) => acc + (Number(t.dieselPrice) || 0), 0);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
-        <h2 className="text-lg font-bold">Fuel Logs & Payment Tracker</h2>
-        {filterReg && <button onClick={() => setFilterReg(null)} className="text-xs bg-slate-200 hover:bg-slate-300 px-3 py-1 rounded text-slate-700">Clear Filter: {filterReg}</button>}
+        <div>
+          <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-2">
+            <Droplet className="text-orange-500" /> Fuel Management
+          </h2>
+          <p className="text-xs text-slate-500">Track diesel consumption and pump settlements</p>
+        </div>
+        {filterReg && (
+          <button 
+            onClick={() => setFilterReg(null)} 
+            className="text-xs bg-orange-100 hover:bg-orange-200 px-3 py-1.5 rounded-lg text-orange-700 font-bold flex items-center gap-1"
+          >
+            <X size={12}/> Clear Filter: {filterReg}
+          </button>
+        )}
       </div>
 
-      <div className="grid grid-cols-3 gap-4 max-w-2xl">
-         <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl">
-            <div className="text-orange-600 font-bold text-xs uppercase mb-1">Total Fuel Cost</div>
-            <div className="text-2xl font-bold text-slate-800">₹ {totalFuelCost.toLocaleString()}</div>
-         </div>
-         <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl">
-            <div className="text-blue-600 font-bold text-xs uppercase mb-1">Total Liters</div>
-            <div className="text-2xl font-bold text-slate-800">{totalLiters.toLocaleString()} L</div>
-         </div>
-         <div className="bg-red-50 border border-red-100 p-4 rounded-xl">
-            <div className="text-red-600 font-bold text-xs uppercase mb-1">Pending Payment</div>
-            <div className="text-2xl font-bold text-slate-800">₹ {remainingPayment.toLocaleString()}</div>
-         </div>
+      {/* --- STATS CARDS --- */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
+            <div className="text-slate-400 font-bold text-[10px] uppercase mb-1 tracking-widest">Total Fuel Cost</div>
+            <div className="text-2xl font-black text-slate-800">₹ {totalFuelCost.toLocaleString()}</div>
+            <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
+                <div className="bg-orange-500 h-full w-2/3"></div>
+            </div>
+          </div>
+          <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
+            <div className="text-slate-400 font-bold text-[10px] uppercase mb-1 tracking-widest">Total Consumption</div>
+            <div className="text-2xl font-black text-slate-800">{totalLiters.toLocaleString()} <span className="text-sm font-normal text-slate-400">Liters</span></div>
+            <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
+                <div className="bg-blue-500 h-full w-1/2"></div>
+            </div>
+          </div>
+          <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm border-l-4 border-l-red-500">
+            <div className="text-red-500 font-bold text-[10px] uppercase mb-1 tracking-widest">Unsettled Fuel</div>
+            <div className="text-2xl font-black text-slate-800">₹ {remainingPayment.toLocaleString()}</div>
+            <p className="text-[10px] text-slate-400 mt-2 italic">* Total amount pending at the pump</p>
+          </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      {/* --- FUEL TABLE --- */}
+      <div className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs">
+          <table className="w-full text-sm text-left border-collapse">
+            <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
               <tr>
                 <th className="px-6 py-4">Date</th>
                 <th className="px-6 py-4">Vehicle</th>
-                <th className="px-6 py-4">Route</th>
-                <th className="px-6 py-4 text-right">Km</th>
+                <th className="px-6 py-4">Trip Destination</th>
                 <th className="px-6 py-4 text-right">Liters</th>
-                <th className="px-6 py-4 text-right">Price</th>
-                <th className="px-6 py-4">Paid On</th>
+                <th className="px-6 py-4 text-right">Amount (₹)</th>
+                <th className="px-6 py-4">Payment Date</th>
+                <th className="px-6 py-4 text-center">Quick Edit</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {sortedTrips.length === 0 ? (
-                <tr><td colSpan={7} className="p-6 text-center text-slate-400">No fuel records found.</td></tr>
+                <tr><td colSpan={7} className="p-10 text-center text-slate-400 font-medium">No fuel records found for this selection.</td></tr>
               ) : (
                 sortedTrips.map((trip: any) => (
-                  <tr key={trip.id} className="hover:bg-slate-50">
+                  <tr key={trip.id} className="hover:bg-blue-50/50 transition-colors group">
                     <td className="px-6 py-4 font-bold text-slate-700">{trip.date}</td>
-                    <td className="px-6 py-4 font-bold text-blue-600">{trip.regNumber}</td>
-                    <td className="px-6 py-4 text-slate-500">{trip.from} ➔ {trip.to}</td>
-                    <td className="px-6 py-4 text-right font-mono text-slate-600">{trip.expense
- || '-'}</td>
-                    <td className="px-6 py-4 text-right font-mono">{trip.dieselLiters || '-'} L</td>
-                    <td className="px-6 py-4 text-right font-bold text-orange-600">₹ {Number(trip.dieselPrice).toLocaleString()}</td>
                     <td className="px-6 py-4">
-                      <input 
-                        type="date" 
-                        className={`border p-1 rounded text-xs outline-none ${trip.fuelPaidDate ? 'bg-green-50 border-green-200 text-green-700 font-bold' : 'bg-red-50 border-red-200 text-red-700 font-bold'}`}
-                        defaultValue={trip.fuelPaidDate}
-                        onBlur={(e) => handleUpdateFuelDate(trip.id, e.target.value)}
-                      />
+                        <span className="font-black text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">
+                            {trip.regNumber}
+                        </span>
+                    </td>
+                    <td className="px-6 py-4 text-slate-500 font-medium">
+                        <div className="flex items-center gap-2">
+                            <Navigation size={12} className="text-slate-300"/>
+                            {trip.to || "Local/Other"}
+                        </div>
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono font-bold text-slate-600">{trip.dieselLiters || '0'} L</td>
+                    <td className="px-6 py-4 text-right font-black text-orange-600">₹ {Number(trip.dieselPrice).toLocaleString()}</td>
+                    <td className="px-6 py-4">
+                      <div className="relative flex items-center gap-2">
+                        <Calendar size={14} className={`absolute left-2 ${trip.fuelPaidDate ? 'text-green-500' : 'text-slate-300'}`} />
+                        <input 
+                          type="date" 
+                          className={`pl-8 pr-2 py-1.5 rounded-lg text-xs outline-none border transition-all ${
+                            trip.fuelPaidDate 
+                            ? 'bg-green-50 border-green-200 text-green-700 font-bold' 
+                            : 'bg-white border-slate-200 text-slate-400'
+                          }`}
+                          defaultValue={trip.fuelPaidDate}
+                          onBlur={(e) => handleUpdateFuelDate(trip.id, e.target.value)}
+                        />
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <button 
+                        onClick={() => handleFilterSelect(trip.regNumber, 'dashboard')}
+                        className="p-2 rounded-full bg-slate-100 text-slate-400 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                        title="Edit Trip & Fuel Info"
+                      >
+                        <Palette size={16}/>
+                      </button>
                     </td>
                   </tr>
                 ))
