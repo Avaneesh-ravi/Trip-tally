@@ -18,7 +18,7 @@ const CONTRACTOR_LOADS: Record<string, string[]> = {
   "Null":["Null"],
   "KSP": ["Maize", "Rape Seed", "Soya", "Fertilizer"],
   "TKS": ["Fertilizer"],
-  "SBT": ["Rice", "Wheat", "Fertilizer", "Maize", "Sugar", "SOYA"],
+  "SBT": ["Rice", "Wheat", "Fertilizer"],
   "MP SAMY": ["Rape Seed"],
   "SS":["Maize"],
   "KGS":["Sugar"],
@@ -27,7 +27,7 @@ const CONTRACTOR_LOADS: Record<string, string[]> = {
 const DESTINATION_RATES = [
   { name: "Null", rate: 0 },{ name: "RGS", rate: 295 },
   { name: "Perundurai-41", rate: 295 },{ name: "Perundurai-42", rate: 295 },{ name: "Perundurai-43", rate: 295 },{ name: "Perundurai-KK8", rate: 295 }
-  ,{ name: "SKM", rate: 180 },{ name: "KK Nagar", rate: 0 },{ name: "Thirumagal", rate: 0 },{ name: "SVM", rate: 0 },{ name: "SK Samy", rate: 0 },{ name: "Moolapalayam", rate: 90 },{ name: "Perundurai", rate: 295 },{ name: "Tiruvachi", rate: 200 },{ name: "Athani", rate: 430 }, { name: "Anthiyur", rate: 430 }, { name: "Ammapettai", rate: 445 },
+  ,{ name: "SKM", rate: 200 },{ name: "KK Nagar", rate: 0 },{ name: "Thirumagal", rate: 0 },{ name: "SVM", rate: 0 },{ name: "SK Samy", rate: 0 },{ name: "Moolapalayam", rate: 90 },{ name: "Perundurai", rate: 295 },{ name: "Athani", rate: 430 }, { name: "Anthiyur", rate: 430 }, { name: "Ammapettai", rate: 445 },
   { name: "Arachalur", rate: 370 }, { name: "Alangiyam", rate: 600 }, { name: "Alukuli", rate: 460 },
   { name: "Avinashi", rate: 550 }, { name: "Hanumanpalli", rate: 350 }, { name: "Appakudal", rate: 410 },
   { name: "Anaimalai", rate: 700 }, { name: "Irayamangalam", rate: 365 }, { name: "Udumalpet", rate: 650 },
@@ -321,39 +321,19 @@ const AuthScreen = ({ onLogin }: { onLogin: (user: any) => void }) => {
   const [error, setError] = useState('');
 
   const handleAuth = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError('');
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
-  if (isLogin) {
-    // 1. Fetch the user from Supabase
-    const { data, error } = await supabase
-      .from('app_users')
-      .select('*')
-      .eq('username', formData.username)
-      .eq('password', formData.password)
-      .single();
-
-    if (error || !data) {
-      setError('Invalid Username or Password');
-    } 
-    // 2. HARD RESTRICTION: Check if the user is Anjaneya Transport
-    else if (data.username !== 'Anjaneya Transport') {
-      setError('Access Denied: This system is restricted to authorized transport personnel only.');
-    } 
-    else {
-      onLogin(data);
+    if (isLogin) {
+      const { data, error } = await supabase.from('app_users').select('*').eq('username', formData.username).eq('password', formData.password).single();
+      if (error || !data) setError('Invalid Username or Password'); else onLogin(data);
+    } else {
+      const { data, error } = await supabase.from('app_users').insert([{ username: formData.username, password: formData.password, phone: formData.phone }]).select().single();
+      if (error) setError(error.message.includes('unique') ? 'Username already exists' : 'Error creating account'); else { alert('Account created! Please log in.'); setIsLogin(true); }
     }
-  } else {
-    // Optional: Disable Sign Up entirely to prevent others from creating accounts
-    setError('New registrations are currently disabled by the administrator.');
-    
-    /* If you still want to allow sign up but keep it private, use this:
-    const { data, error } = await supabase.from('app_users').insert([...]).select().single();
-    */
-  }
-  setLoading(false);
-};
+    setLoading(false);
+  };
 
   return (
     <div className="flex h-screen w-full bg-slate-900 items-center justify-center p-4">
@@ -372,7 +352,7 @@ const AuthScreen = ({ onLogin }: { onLogin: (user: any) => void }) => {
             <div><label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Password</label><div className="relative"><Lock className="absolute left-3 top-3 text-slate-400" size={18} /><input type="password" className="w-full border pl-10 p-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required /></div></div>
             <button disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2">{loading ? <RefreshCw className="animate-spin" size={18}/> : (isLogin ? 'Login to Dashboard' : 'Sign Up')}</button>
           </form>
-          <div className="mt-6 text-center text-sm"><span className="text-slate-500">{isLogin ? "Don't have an account?" : "Already have an account?"}</span></div>
+          <div className="mt-6 text-center text-sm"><span className="text-slate-500">{isLogin ? "Don't have an account?" : "Already have an account?"}</span><button onClick={() => setIsLogin(!isLogin)} className="text-blue-600 font-bold ml-1 hover:underline">{isLogin ? 'Sign Up' : 'Login'}</button></div>
         </div>
       </div>
     </div>
@@ -1527,8 +1507,9 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
   );
 };
 
-const FuelView = ({ trips, filterReg, setFilterReg, setTrips, handleFilterSelect }: any) => {
-  // 1. FILTER: Exclude Bill No "0" globally
+const FuelView = ({ trips, filterReg, setFilterReg, setTrips }: any) => {
+  
+  // 1. FILTER: Exclude Bill No "0" globally for this page
   const visibleTrips = trips.filter((t: any) => String(t.billNo) !== "0");
 
   // 2. SORTING
@@ -1536,113 +1517,89 @@ const FuelView = ({ trips, filterReg, setFilterReg, setTrips, handleFilterSelect
   const paidTrips = visibleTrips.filter((t: any) => t.fuelPaidDate).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const sortedTrips = [...unpaidTrips, ...paidTrips];
 
+  // 3. DATE UPDATE FUNCTION
   const handleUpdateFuelDate = async (tripId: number, date: string) => {
     const val = date || null;
     const { error } = await supabase.from('trips').update({ fuel_paid_date: val }).eq('id', tripId);
-    if (error) {
-      alert("Error saving date: " + error.message);
+    if(error) {
+        alert("Error saving date: " + error.message);
     } else {
-      setTrips((prev: any) => prev.map((t: any) => t.id === tripId ? { ...t, fuelPaidDate: val } : t));
+        if(setTrips) {
+            setTrips((prev: any) => prev.map((t: any) => 
+                t.id === tripId ? { ...t, fuelPaidDate: val } : t
+            ));
+        }
     }
   };
 
+  // 4. CALCULATIONS
   const totalFuelCost = visibleTrips.reduce((acc: number, t: any) => acc + (Number(t.dieselPrice) || 0), 0);
+  const totalLiters = visibleTrips.reduce((acc: number, t: any) => acc + (Number(t.dieselLiters) || 0), 0);
   const remainingPayment = unpaidTrips.reduce((acc: number, t: any) => acc + (Number(t.dieselPrice) || 0), 0);
 
   return (
-    <div className="space-y-6 pb-20">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          <Droplet className="text-orange-500" /> Fuel Tracker
-        </h2>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-orange-50 p-3 rounded-xl border border-orange-100">
-            <p className="text-[10px] font-bold text-orange-600 uppercase">Total Cost</p>
-            <p className="text-lg font-black text-slate-800">₹{totalFuelCost.toLocaleString()}</p>
-          </div>
-          <div className="bg-red-50 p-3 rounded-xl border border-red-100">
-            <p className="text-[10px] font-bold text-red-600 uppercase">Pending</p>
-            <p className="text-lg font-black text-slate-800">₹{remainingPayment.toLocaleString()}</p>
-          </div>
-        </div>
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-bold">Fuel Logs & Payment Tracker</h2>
+        {filterReg && <button onClick={() => setFilterReg(null)} className="text-xs bg-slate-200 hover:bg-slate-300 px-3 py-1 rounded text-slate-700">Clear Filter: {filterReg}</button>}
       </div>
 
-      {/* MOBILE LIST (Visible only on small screens) */}
-      <div className="md:hidden space-y-4">
-        {sortedTrips.map((trip: any) => (
-          <div key={trip.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-            <div className={`absolute top-0 left-0 w-1 h-full ${trip.fuelPaidDate ? 'bg-emerald-500' : 'bg-orange-500'}`} />
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase">{trip.date}</p>
-                <p className="text-lg font-black text-blue-600">{trip.regNumber}</p>
-              </div>
-              <button 
-                onClick={() => handleFilterSelect(trip.regNumber, 'dashboard')}
-                className="p-2 bg-blue-50 text-blue-600 rounded-full"
-              >
-                <Palette size={18} />
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase">Liters</p>
-                <p className="font-bold text-slate-700">{trip.dieselLiters || '0'} L</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase">Amount</p>
-                <p className="font-bold text-orange-600">₹{Number(trip.dieselPrice).toLocaleString()}</p>
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-slate-50">
-              <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Payment Status</label>
-              <input 
-                type="date" 
-                className={`w-full p-2 rounded-lg text-sm border ${trip.fuelPaidDate ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-slate-50 border-slate-100'}`}
-                defaultValue={trip.fuelPaidDate}
-                onBlur={(e) => handleUpdateFuelDate(trip.id, e.target.value)}
-              />
-            </div>
-          </div>
-        ))}
+      <div className="grid grid-cols-3 gap-4 max-w-2xl">
+         <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl">
+            <div className="text-orange-600 font-bold text-xs uppercase mb-1">Total Fuel Cost</div>
+            <div className="text-2xl font-bold text-slate-800">₹ {totalFuelCost.toLocaleString()}</div>
+         </div>
+         <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl">
+            <div className="text-blue-600 font-bold text-xs uppercase mb-1">Total Liters</div>
+            <div className="text-2xl font-bold text-slate-800">{totalLiters.toLocaleString()} L</div>
+         </div>
+         <div className="bg-red-50 border border-red-100 p-4 rounded-xl">
+            <div className="text-red-600 font-bold text-xs uppercase mb-1">Pending Payment</div>
+            <div className="text-2xl font-bold text-slate-800">₹ {remainingPayment.toLocaleString()}</div>
+         </div>
       </div>
 
-      {/* DESKTOP TABLE (Hidden on mobile) */}
-      <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px]">
-            <tr>
-              <th className="px-6 py-4">Date</th>
-              <th className="px-6 py-4">Lorry</th>
-              <th className="px-6 py-4">Destination</th>
-              <th className="px-6 py-4 text-right">Liters</th>
-              <th className="px-6 py-4 text-right">Price</th>
-              <th className="px-6 py-4">Paid On</th>
-              <th className="px-6 py-4 text-center">Edit</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {sortedTrips.map((trip: any) => (
-              <tr key={trip.id} className="hover:bg-slate-50">
-                <td className="px-6 py-4">{trip.date}</td>
-                <td className="px-6 py-4 font-bold text-blue-600">{trip.regNumber}</td>
-                <td className="px-6 py-4 text-slate-500">{trip.to || "N/A"}</td>
-                <td className="px-6 py-4 text-right">{trip.dieselLiters} L</td>
-                <td className="px-6 py-4 text-right font-bold text-orange-600">₹{Number(trip.dieselPrice).toLocaleString()}</td>
-                <td className="px-6 py-4">
-                  <input type="date" className="border p-1 rounded text-xs" defaultValue={trip.fuelPaidDate} onBlur={(e) => handleUpdateFuelDate(trip.id, e.target.value)} />
-                </td>
-                <td className="px-6 py-4 text-center">
-                  <button onClick={() => handleFilterSelect(trip.regNumber, 'dashboard')} className="text-slate-400 hover:text-blue-600">
-                    <Palette size={16} />
-                  </button>
-                </td>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs">
+              <tr>
+                <th className="px-6 py-4">Date</th>
+                <th className="px-6 py-4">Vehicle</th>
+                <th className="px-6 py-4">Route</th>
+                <th className="px-6 py-4 text-right">Km</th>
+                <th className="px-6 py-4 text-right">Liters</th>
+                <th className="px-6 py-4 text-right">Price</th>
+                <th className="px-6 py-4">Paid On</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {sortedTrips.length === 0 ? (
+                <tr><td colSpan={7} className="p-6 text-center text-slate-400">No fuel records found.</td></tr>
+              ) : (
+                sortedTrips.map((trip: any) => (
+                  <tr key={trip.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 font-bold text-slate-700">{trip.date}</td>
+                    <td className="px-6 py-4 font-bold text-blue-600">{trip.regNumber}</td>
+                    <td className="px-6 py-4 text-slate-500">{trip.from} ➔ {trip.to}</td>
+                    <td className="px-6 py-4 text-right font-mono text-slate-600">{trip.expense
+ || '-'}</td>
+                    <td className="px-6 py-4 text-right font-mono">{trip.dieselLiters || '-'} L</td>
+                    <td className="px-6 py-4 text-right font-bold text-orange-600">₹ {Number(trip.dieselPrice).toLocaleString()}</td>
+                    <td className="px-6 py-4">
+                      <input 
+                        type="date" 
+                        className={`border p-1 rounded text-xs outline-none ${trip.fuelPaidDate ? 'bg-green-50 border-green-200 text-green-700 font-bold' : 'bg-red-50 border-red-200 text-red-700 font-bold'}`}
+                        defaultValue={trip.fuelPaidDate}
+                        onBlur={(e) => handleUpdateFuelDate(trip.id, e.target.value)}
+                      />
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -2380,18 +2337,16 @@ const VehicleCard = ({ data, onAction, onFilter }: { data: Vehicle, onAction: (t
 };
 
 const ModalWrapper = ({ title, children, onClose, headerContent }: any) => (
-  <div className="fixed inset-0 bg-black/60 z-[100] flex items-end md:items-center justify-center p-0 md:p-4 backdrop-blur-sm">
-    <div className="bg-white w-full max-w-lg rounded-t-3xl md:rounded-2xl shadow-2xl flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-10 md:zoom-in-95">
-      {/* Header */}
-      <div className="flex justify-between items-center p-5 border-b border-slate-100 sticky top-0 bg-white rounded-t-3xl md:rounded-t-2xl z-10">
+  <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+    <div className="bg-white w-full max-w-sm rounded-xl shadow-2xl animate-in zoom-in-95 overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50 shrink-0">
         <h3 className="font-bold text-lg text-slate-800">{title}</h3>
-        <div className="flex items-center gap-2">
-          {headerContent}
-          <button onClick={onClose} className="p-2 bg-slate-100 rounded-full text-slate-500"><X size={20}/></button>
+        <div className="flex items-center gap-3">
+            {headerContent}
+            <button onClick={onClose}><X size={20} className="text-slate-400 hover:text-red-500"/></button>
         </div>
       </div>
-      {/* Scrollable Content */}
-      <div className="p-6 overflow-y-auto pb-10">
+      <div className="p-5 overflow-y-auto">
         {children}
       </div>
     </div>
