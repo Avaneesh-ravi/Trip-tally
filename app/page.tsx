@@ -1528,140 +1528,121 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
 };
 
 const FuelView = ({ trips, filterReg, setFilterReg, setTrips, handleFilterSelect }: any) => {
-  
   // 1. FILTER: Exclude Bill No "0" globally
   const visibleTrips = trips.filter((t: any) => String(t.billNo) !== "0");
 
-  // 2. SORTING: Unpaid first, then by date
+  // 2. SORTING
   const unpaidTrips = visibleTrips.filter((t: any) => !t.fuelPaidDate).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const paidTrips = visibleTrips.filter((t: any) => t.fuelPaidDate).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const sortedTrips = [...unpaidTrips, ...paidTrips];
 
-  // 3. DATE UPDATE FUNCTION (Syncs with Supabase)
   const handleUpdateFuelDate = async (tripId: number, date: string) => {
     const val = date || null;
     const { error } = await supabase.from('trips').update({ fuel_paid_date: val }).eq('id', tripId);
-    if(error) {
-        alert("Error saving date: " + error.message);
+    if (error) {
+      alert("Error saving date: " + error.message);
     } else {
-        setTrips((prev: any) => prev.map((t: any) => 
-            t.id === tripId ? { ...t, fuelPaidDate: val } : t
-        ));
+      setTrips((prev: any) => prev.map((t: any) => t.id === tripId ? { ...t, fuelPaidDate: val } : t));
     }
   };
 
-  // 4. CALCULATIONS
   const totalFuelCost = visibleTrips.reduce((acc: number, t: any) => acc + (Number(t.dieselPrice) || 0), 0);
-  const totalLiters = visibleTrips.reduce((acc: number, t: any) => acc + (Number(t.dieselLiters) || 0), 0);
   const remainingPayment = unpaidTrips.reduce((acc: number, t: any) => acc + (Number(t.dieselPrice) || 0), 0);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-2">
-            <Droplet className="text-orange-500" /> Fuel Management
-          </h2>
-          <p className="text-xs text-slate-500">Track diesel consumption and pump settlements</p>
+    <div className="space-y-6 pb-20">
+      <div className="flex flex-col gap-2">
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Droplet className="text-orange-500" /> Fuel Tracker
+        </h2>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-orange-50 p-3 rounded-xl border border-orange-100">
+            <p className="text-[10px] font-bold text-orange-600 uppercase">Total Cost</p>
+            <p className="text-lg font-black text-slate-800">₹{totalFuelCost.toLocaleString()}</p>
+          </div>
+          <div className="bg-red-50 p-3 rounded-xl border border-red-100">
+            <p className="text-[10px] font-bold text-red-600 uppercase">Pending</p>
+            <p className="text-lg font-black text-slate-800">₹{remainingPayment.toLocaleString()}</p>
+          </div>
         </div>
-        {filterReg && (
-          <button 
-            onClick={() => setFilterReg(null)} 
-            className="text-xs bg-orange-100 hover:bg-orange-200 px-3 py-1.5 rounded-lg text-orange-700 font-bold flex items-center gap-1"
-          >
-            <X size={12}/> Clear Filter: {filterReg}
-          </button>
-        )}
       </div>
 
-      {/* --- STATS CARDS --- */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-            <div className="text-slate-400 font-bold text-[10px] uppercase mb-1 tracking-widest">Total Fuel Cost</div>
-            <div className="text-2xl font-black text-slate-800">₹ {totalFuelCost.toLocaleString()}</div>
-            <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
-                <div className="bg-orange-500 h-full w-2/3"></div>
+      {/* MOBILE LIST (Visible only on small screens) */}
+      <div className="md:hidden space-y-4">
+        {sortedTrips.map((trip: any) => (
+          <div key={trip.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+            <div className={`absolute top-0 left-0 w-1 h-full ${trip.fuelPaidDate ? 'bg-emerald-500' : 'bg-orange-500'}`} />
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">{trip.date}</p>
+                <p className="text-lg font-black text-blue-600">{trip.regNumber}</p>
+              </div>
+              <button 
+                onClick={() => handleFilterSelect(trip.regNumber, 'dashboard')}
+                className="p-2 bg-blue-50 text-blue-600 rounded-full"
+              >
+                <Palette size={18} />
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Liters</p>
+                <p className="font-bold text-slate-700">{trip.dieselLiters || '0'} L</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Amount</p>
+                <p className="font-bold text-orange-600">₹{Number(trip.dieselPrice).toLocaleString()}</p>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-50">
+              <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Payment Status</label>
+              <input 
+                type="date" 
+                className={`w-full p-2 rounded-lg text-sm border ${trip.fuelPaidDate ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-slate-50 border-slate-100'}`}
+                defaultValue={trip.fuelPaidDate}
+                onBlur={(e) => handleUpdateFuelDate(trip.id, e.target.value)}
+              />
             </div>
           </div>
-          <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-            <div className="text-slate-400 font-bold text-[10px] uppercase mb-1 tracking-widest">Total Consumption</div>
-            <div className="text-2xl font-black text-slate-800">{totalLiters.toLocaleString()} <span className="text-sm font-normal text-slate-400">Liters</span></div>
-            <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
-                <div className="bg-blue-500 h-full w-1/2"></div>
-            </div>
-          </div>
-          <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm border-l-4 border-l-red-500">
-            <div className="text-red-500 font-bold text-[10px] uppercase mb-1 tracking-widest">Unsettled Fuel</div>
-            <div className="text-2xl font-black text-slate-800">₹ {remainingPayment.toLocaleString()}</div>
-            <p className="text-[10px] text-slate-400 mt-2 italic">* Total amount pending at the pump</p>
-          </div>
+        ))}
       </div>
 
-      {/* --- FUEL TABLE --- */}
-      <div className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left border-collapse">
-            <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-6 py-4">Date</th>
-                <th className="px-6 py-4">Vehicle</th>
-                <th className="px-6 py-4">Trip Destination</th>
-                <th className="px-6 py-4 text-right">Liters</th>
-                <th className="px-6 py-4 text-right">Amount (₹)</th>
-                <th className="px-6 py-4">Payment Date</th>
-                <th className="px-6 py-4 text-center">Quick Edit</th>
+      {/* DESKTOP TABLE (Hidden on mobile) */}
+      <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <table className="w-full text-sm text-left">
+          <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px]">
+            <tr>
+              <th className="px-6 py-4">Date</th>
+              <th className="px-6 py-4">Lorry</th>
+              <th className="px-6 py-4">Destination</th>
+              <th className="px-6 py-4 text-right">Liters</th>
+              <th className="px-6 py-4 text-right">Price</th>
+              <th className="px-6 py-4">Paid On</th>
+              <th className="px-6 py-4 text-center">Edit</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {sortedTrips.map((trip: any) => (
+              <tr key={trip.id} className="hover:bg-slate-50">
+                <td className="px-6 py-4">{trip.date}</td>
+                <td className="px-6 py-4 font-bold text-blue-600">{trip.regNumber}</td>
+                <td className="px-6 py-4 text-slate-500">{trip.to || "N/A"}</td>
+                <td className="px-6 py-4 text-right">{trip.dieselLiters} L</td>
+                <td className="px-6 py-4 text-right font-bold text-orange-600">₹{Number(trip.dieselPrice).toLocaleString()}</td>
+                <td className="px-6 py-4">
+                  <input type="date" className="border p-1 rounded text-xs" defaultValue={trip.fuelPaidDate} onBlur={(e) => handleUpdateFuelDate(trip.id, e.target.value)} />
+                </td>
+                <td className="px-6 py-4 text-center">
+                  <button onClick={() => handleFilterSelect(trip.regNumber, 'dashboard')} className="text-slate-400 hover:text-blue-600">
+                    <Palette size={16} />
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {sortedTrips.length === 0 ? (
-                <tr><td colSpan={7} className="p-10 text-center text-slate-400 font-medium">No fuel records found for this selection.</td></tr>
-              ) : (
-                sortedTrips.map((trip: any) => (
-                  <tr key={trip.id} className="hover:bg-blue-50/50 transition-colors group">
-                    <td className="px-6 py-4 font-bold text-slate-700">{trip.date}</td>
-                    <td className="px-6 py-4">
-                        <span className="font-black text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">
-                            {trip.regNumber}
-                        </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-500 font-medium">
-                        <div className="flex items-center gap-2">
-                            <Navigation size={12} className="text-slate-300"/>
-                            {trip.to || "Local/Other"}
-                        </div>
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono font-bold text-slate-600">{trip.dieselLiters || '0'} L</td>
-                    <td className="px-6 py-4 text-right font-black text-orange-600">₹ {Number(trip.dieselPrice).toLocaleString()}</td>
-                    <td className="px-6 py-4">
-                      <div className="relative flex items-center gap-2">
-                        <Calendar size={14} className={`absolute left-2 ${trip.fuelPaidDate ? 'text-green-500' : 'text-slate-300'}`} />
-                        <input 
-                          type="date" 
-                          className={`pl-8 pr-2 py-1.5 rounded-lg text-xs outline-none border transition-all ${
-                            trip.fuelPaidDate 
-                            ? 'bg-green-50 border-green-200 text-green-700 font-bold' 
-                            : 'bg-white border-slate-200 text-slate-400'
-                          }`}
-                          defaultValue={trip.fuelPaidDate}
-                          onBlur={(e) => handleUpdateFuelDate(trip.id, e.target.value)}
-                        />
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <button 
-                        onClick={() => handleFilterSelect(trip.regNumber, 'dashboard')}
-                        className="p-2 rounded-full bg-slate-100 text-slate-400 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                        title="Edit Trip & Fuel Info"
-                      >
-                        <Palette size={16}/>
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -2399,16 +2380,18 @@ const VehicleCard = ({ data, onAction, onFilter }: { data: Vehicle, onAction: (t
 };
 
 const ModalWrapper = ({ title, children, onClose, headerContent }: any) => (
-  <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-    <div className="bg-white w-full max-w-sm rounded-xl shadow-2xl animate-in zoom-in-95 overflow-hidden flex flex-col max-h-[90vh]">
-      <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50 shrink-0">
+  <div className="fixed inset-0 bg-black/60 z-[100] flex items-end md:items-center justify-center p-0 md:p-4 backdrop-blur-sm">
+    <div className="bg-white w-full max-w-lg rounded-t-3xl md:rounded-2xl shadow-2xl flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-10 md:zoom-in-95">
+      {/* Header */}
+      <div className="flex justify-between items-center p-5 border-b border-slate-100 sticky top-0 bg-white rounded-t-3xl md:rounded-t-2xl z-10">
         <h3 className="font-bold text-lg text-slate-800">{title}</h3>
-        <div className="flex items-center gap-3">
-            {headerContent}
-            <button onClick={onClose}><X size={20} className="text-slate-400 hover:text-red-500"/></button>
+        <div className="flex items-center gap-2">
+          {headerContent}
+          <button onClick={onClose} className="p-2 bg-slate-100 rounded-full text-slate-500"><X size={20}/></button>
         </div>
       </div>
-      <div className="p-5 overflow-y-auto">
+      {/* Scrollable Content */}
+      <div className="p-6 overflow-y-auto pb-10">
         {children}
       </div>
     </div>
