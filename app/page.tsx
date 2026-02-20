@@ -27,7 +27,7 @@ const CONTRACTOR_LOADS: Record<string, string[]> = {
 const DESTINATION_RATES = [
   { name: "Null", rate: 0 },{ name: "RGS", rate: 295 },
   { name: "Perundurai-41", rate: 295 },{ name: "Perundurai-42", rate: 295 },{ name: "Perundurai-43", rate: 295 },{ name: "Perundurai-KK8", rate: 295 }
-  ,{ name: "SKM", rate: 200 },{ name: "KK Nagar", rate: 0 },{ name: "Thirumagal", rate: 0 },{ name: "SVM", rate: 0 },{ name: "SK Samy", rate: 0 },{ name: "Moolapalayam", rate: 90 },{ name: "Perundurai", rate: 295 },{ name: "Athani", rate: 430 }, { name: "Anthiyur", rate: 430 }, { name: "Ammapettai", rate: 445 },
+  ,{ name: "SKM", rate: 180 },{ name: "KK Nagar", rate: 0 },{ name: "Thirumagal", rate: 0 },{ name: "SVM", rate: 0 },{ name: "SK Samy", rate: 0 },{ name: "Moolapalayam", rate: 90 },{ name: "Perundurai", rate: 295 },{ name: "Tiruvachi", rate: 200 },{ name: "Athani", rate: 430 }, { name: "Anthiyur", rate: 430 }, { name: "Ammapettai", rate: 445 },
   { name: "Arachalur", rate: 370 }, { name: "Alangiyam", rate: 600 }, { name: "Alukuli", rate: 460 },
   { name: "Avinashi", rate: 550 }, { name: "Hanumanpalli", rate: 350 }, { name: "Appakudal", rate: 410 },
   { name: "Anaimalai", rate: 700 }, { name: "Irayamangalam", rate: 365 }, { name: "Udumalpet", rate: 650 },
