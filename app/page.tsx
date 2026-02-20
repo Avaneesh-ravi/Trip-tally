@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase'; 
-import {  
+import { 
   Truck, Users, Wallet, LayoutDashboard, History, List,
   Bell, Plus, FileText, Navigation, X, TrendingUp, TrendingDown,
   Leaf, ShieldCheck, ChevronRight, RefreshCw, ChevronDown, ChevronUp,
@@ -1471,81 +1471,7 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
     </div>
   );
 };
-const FuelEditModal = ({ trip, onClose, setTrips, currentUser }: any) => {
-  const [formData, setFormData] = useState({
-    dieselLiters: trip.dieselLiters || '0',
-    dieselPrice: trip.dieselPrice || '0',
-    fuelPaidDate: trip.fuelPaidDate || ''
-  });
-  const [loading, setLoading] = useState(false);
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    const updatePayload = {
-      diesel_liters: Number(formData.dieselLiters),
-      diesel_price: Number(formData.dieselPrice),
-      fuel_paid_date: formData.fuelPaidDate || null,
-    };
-
-    const { error } = await supabase
-      .from('trips')
-      .update(updatePayload)
-      .eq('id', trip.id);
-
-    if (error) {
-      alert("Error updating fuel: " + error.message);
-    } else {
-      // Update local state so all other pages (Finance/Trips) reflect the change immediately
-      setTrips((prev: any[]) => prev.map(t => 
-        t.id === trip.id ? { ...t, dieselLiters: formData.dieselLiters, dieselPrice: formData.dieselPrice, fuelPaidDate: formData.fuelPaidDate } : t
-      ));
-      alert("Fuel Log Updated Successfully!");
-      onClose();
-    }
-    setLoading(false);
-  };
-
-  return (
-    <ModalWrapper title={`Edit Fuel: ${trip.regNumber}`} onClose={onClose}>
-      <form onSubmit={handleUpdate} className="space-y-4">
-        <div className="p-3 bg-blue-50 rounded-lg text-[11px] text-blue-700 font-medium">
-          Editing fuel for Trip Bill: <strong>{trip.billNo}</strong> ({trip.date})
-        </div>
-        
-        <Input 
-          label="Diesel Liters" 
-          type="number" 
-          value={formData.dieselLiters} 
-          onChange={(e) => setFormData({...formData, dieselLiters: e.target.value})} 
-        />
-        
-        <Input 
-          label="Fuel Price (Total Amount Paid)" 
-          type="number" 
-          value={formData.dieselPrice} 
-          onChange={(e) => setFormData({...formData, dieselPrice: e.target.value})} 
-        />
-
-        <Input 
-          label="Fuel Paid Date" 
-          type="date" 
-          value={formData.fuelPaidDate} 
-          onChange={(e) => setFormData({...formData, fuelPaidDate: e.target.value})} 
-        />
-
-        <button 
-          disabled={loading}
-          type="submit" 
-          className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
-        >
-          {loading ? <RefreshCw className="animate-spin" size={18}/> : "Update All Records"}
-        </button>
-      </form>
-    </ModalWrapper>
-  );
-};
 const FuelView = ({ trips, filterReg, setFilterReg, setTrips }: any) => {
   
   // 1. FILTER: Exclude Bill No "0" globally for this page
@@ -1750,7 +1676,7 @@ const DriversView = ({ drivers, setDrivers, trips, setTrips, currentUser }: any)
     e.preventDefault();
     const { data, error } = await supabase.from('drivers').insert([{ 
         name: newDriver.name, phone: newDriver.phone, license: newDriver.license, wallet_balance: 0,
-        user_id: currentUser.id
+        user_id: currentUser.id // ADDED USER ID
     }]).select().single();
 
     if (error) { 
@@ -1796,41 +1722,37 @@ const DriversView = ({ drivers, setDrivers, trips, setTrips, currentUser }: any)
             <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs">
               <tr>
                 <th className="px-6 py-4">Driver Name</th>
-                <th className="px-6 py-4">Phone</th>
-                <th className="px-6 py-4">License</th>
-                <th className="px-6 py-4 text-right">Wallet Balance</th>
+                <th className="px-6 py-4">Phone Number</th>
+                <th className="px-6 py-4">License ID</th>
+                <th className="px-6 py-4 text-right">Net Added Amount</th>
                 <th className="px-6 py-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {drivers.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-400">No drivers found. Add a driver to get started.</td>
-                </tr>
-              ) : (
-                drivers.map((driver: Driver) => (
-                  <tr key={driver.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedDriver(driver)}>
-                    <td className="px-6 py-4 font-bold text-slate-800">{driver.name}</td>
-                    <td className="px-6 py-4 text-blue-600">{driver.phone}</td>
-                    <td className="px-6 py-4 font-mono text-xs text-slate-500">{driver.license}</td>
-                    <td className="px-6 py-4 text-right font-bold text-emerald-600">₹ {Number(driver.walletBalance || 0).toLocaleString()}</td>
-                    <td className="px-6 py-4 text-center">
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleSettleDriver(driver.id, driver.name, driver.walletBalance || 0, e); }}
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        title="Settle Driver"
-                      >
-                        <Wallet size={16} />
-                      </button>
+              
+              {drivers.map((driver: Driver) => {
+                const netAdded = -driver.walletBalance; 
+                return (
+                  <tr key={driver.id} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setSelectedDriver(driver)}>
+                    <td className="px-6 py-4"><div className="font-bold text-slate-800">{driver.name}</div></td>
+                    <td className="px-6 py-4 text-slate-600">{driver.phone}</td>
+                    <td className="px-6 py-4 text-slate-600 font-mono uppercase">{driver.license}</td>
+                    <td className="px-6 py-4 text-right">
+                      <span className={`py-1 px-3 rounded-full font-bold text-xs ${netAdded >= 0 ? 'bg-blue-50 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                        ₹ {netAdded.toLocaleString()}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 flex justify-center items-center gap-4">
+                      {driver.walletBalance > 0 && (<button onClick={(e) => handleSettleDriver(driver.id, driver.name, driver.walletBalance, e)} className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-md text-xs font-bold transition-all shadow-sm z-10"><RefreshCw size={12} /> Settle</button>)}
+                      <ChevronRight size={16} className="text-slate-400" />
                     </td>
                   </tr>
-                ))
-              )}
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
- 
       {selectedDriver && <DriverDetailsModal driver={selectedDriver} setDrivers={setDrivers} onClose={() => setSelectedDriver(null)} currentUser={currentUser} />}
       {isAdding && (<ModalWrapper title="Register Driver" onClose={() => setIsAdding(false)}><form onSubmit={handleAddDriver} className="space-y-4"><Input label="Name" value={newDriver.name} onChange={(e) => setNewDriver({...newDriver, name: e.target.value})} required /><Input label="Phone" value={newDriver.phone} onChange={(e) => setNewDriver({...newDriver, phone: e.target.value})} required /><Input label="License" value={newDriver.license} onChange={(e) => setNewDriver({...newDriver, license: e.target.value})} uppercase required /><button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold">Save Driver to Database</button></form></ModalWrapper>)}
     </div>
