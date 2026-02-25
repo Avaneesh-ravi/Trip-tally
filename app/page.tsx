@@ -690,6 +690,9 @@ export default function LMSApp() {
              <button onClick={() => { setCurrentView("drivers"); setShowMobileMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 w-full text-left">
                 <Users size={18} className="text-blue-600"/> Drivers
              </button>
+             <button onClick={() => { setCurrentView("driverHistory"); setShowMobileMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 w-full text-left">
+        <History size={18} className="text-emerald-600"/> Driver History
+      </button>
              <button onClick={() => { setCurrentView("credited"); setShowMobileMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 w-full text-left">
                 <CreditCard size={18} className="text-purple-600"/> Credited
              </button>
