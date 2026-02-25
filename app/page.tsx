@@ -583,10 +583,12 @@ export default function LMSApp() {
       case "dashboard": return <DashboardView {...props} />;
       case "trips": return <TripsView {...props} />;
       case "drivers": return <DriversView {...props} />;
+      
       case "finance": return <FinanceView {...props} />;
       case "history": return <HistoryView {...props} />;
       case "fuel": return <FuelView {...props} />; 
       case "credited": return <AmountCreditedView {...props} />;
+      case "driverHistory": return <DriverHistoryView {...props} />;
       default: return <DashboardView {...props} />;
     }
   };
@@ -615,10 +617,12 @@ export default function LMSApp() {
         <nav className="flex-1 p-4 space-y-2">
           <SidebarItem icon={<LayoutDashboard/>} label="Dashboard" active={currentView === "dashboard"} onClick={() => { setFilterReg(null); setCurrentView("dashboard"); }} />
           <SidebarItem icon={<List/>} label="Trips Log" active={currentView === "trips"} onClick={() => { setFilterReg(null); setCurrentView("trips"); }} />
+          
           <SidebarItem icon={<Users/>} label="Drivers" active={currentView === "drivers"} onClick={() => { setFilterReg(null); setCurrentView("drivers"); }} />
           <SidebarItem icon={<Wallet/>} label="Finance" active={currentView === "finance"} onClick={() => { setFilterReg(null); setCurrentView("finance"); }} />
           <SidebarItem icon={<CreditCard/>} label="Credited" active={currentView === "credited"} onClick={() => { setFilterReg(null); setCurrentView("credited"); }} /> 
           <SidebarItem icon={<Droplet/>} label="Fuel" active={currentView === "fuel"} onClick={() => { setFilterReg(null); setCurrentView("fuel"); }} />
+          <SidebarItem icon={<History/>} label="Driver History" active={currentView === "driverHistory"} onClick={() => { setFilterReg(null); setCurrentView("driverHistory"); }} />
           <SidebarItem icon={<History/>} label="History" active={currentView === "history"} onClick={() => { setFilterReg(null); setCurrentView("history"); }} />
         </nav>
         <div className="p-4 border-t border-slate-800">
@@ -2922,6 +2926,122 @@ const Input = ({
     />
   </div>
 );
+
+const DriverHistoryView = ({ trips, drivers }: any) => {
+  const [selectedDriver, setSelectedDriver] = useState<string>('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const filteredTrips = trips.filter((t: any) => {
+    const matchesDriver = selectedDriver ? t.driverName === selectedDriver : true;
+    const isNotPlaceholder = String(t.billNo) !== "0";
+    if (!startDate && !endDate) return matchesDriver && isNotPlaceholder;
+    const tripDate = new Date(t.date);
+    const start = startDate ? new Date(startDate) : new Date('1900-01-01');
+    const end = endDate ? new Date(endDate) : new Date('2100-01-01');
+    return matchesDriver && isNotPlaceholder && tripDate >= start && tripDate <= end;
+  });
+
+  // --- EXCEL DOWNLOAD LOGIC ---
+  const handleDownloadExcel = () => {
+    if (filteredTrips.length === 0) { alert("No data to download"); return; }
+    const headers = ["Date", "Bill No", "Vehicle", "Route", "Load Type", "Net Wt", "Advance", "L/U", "Web/Exp", "Dr Pay", "Total Exp", "Net Added"];
+    const csvRows = [
+      headers.join(','),
+      ...filteredTrips.map((t: any) => {
+        const totalExp = (Number(t.loadingCharge) || 0) + (Number(t.unloadingCharge) || 0) + (Number(t.weighbridgeCharge) || 0) + (Number(t.expense) || 0) + (Number(t.driverTripPay) || 0);
+        const netAdded = (Number(t.driverTripPay) || 0) - ((Number(t.advance) || 0) - ((Number(t.loadingCharge) || 0) + (Number(t.unloadingCharge) || 0) + (Number(t.weighbridgeCharge) || 0) + (Number(t.expense) || 0)));
+        return [
+          t.date, t.billNo, t.regNumber, `"${t.to}"`, t.loadType, t.netWeight, t.advance,
+          `"${t.loadingCharge}/${t.unloadingCharge}"`, `"${t.weighbridgeCharge}/${t.expense}"`,
+          t.driverTripPay, totalExp, netAdded
+        ].join(',');
+      })
+    ];
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Driver_History_${selectedDriver || 'All'}.csv`;
+    a.click();
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div>
+          <h2 className="text-lg font-bold text-slate-800">Driver History Log</h2>
+          <p className="text-xs text-slate-500">Comprehensive trip records filtered by driver</p>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-3">
+          <select 
+            className="text-xs border border-slate-200 p-2 rounded-lg font-bold text-slate-700 outline-none"
+            value={selectedDriver}
+            onChange={(e) => setSelectedDriver(e.target.value)}
+          >
+            <option value="">All Drivers</option>
+            {drivers.map((d: any) => <option key={d.id} value={d.name}>{d.name}</option>)}
+          </select>
+          <DateFilter startDate={startDate} endDate={endDate} onStartChange={setStartDate} onEndChange={setEndDate} />
+          
+          {/* ACTION BUTTONS */}
+          <div className="flex gap-2 border-l pl-3 ml-1">
+            <button onClick={handleDownloadExcel} className="p-2 bg-green-50 text-green-600 rounded-lg border border-green-100 hover:bg-green-100 transition-colors" title="Download Excel">
+              <Download size={18}/>
+            </button>
+            <button onClick={() => printSection('driver-history-table', 'Driver History Report')} className="p-2 bg-blue-50 text-blue-600 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors" title="Print Screen">
+              <Printer size={18}/>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="driver-history-table" className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+        <table className="w-full text-sm text-left">
+          <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px] whitespace-nowrap">
+            <tr>
+              <th className="px-4 py-3">Date</th>
+              <th className="px-4 py-3">Bill No</th>
+              <th className="px-4 py-3 border-l border-slate-700">Vehicle</th>
+              <th className="px-4 py-3 border-l border-slate-700">Route</th>
+              <th className="px-4 py-3 border-l border-slate-700">Load Type</th>
+              <th className="px-4 py-3 text-center bg-slate-700 text-white">Net Weight</th>
+              <th className="px-4 py-3 text-right text-orange-400">Advance</th>
+              <th className="px-4 py-3 text-center text-red-300">L / U</th>
+              <th className="px-4 py-3 text-center text-red-400">Web / Exp</th>
+              <th className="px-4 py-3 text-right text-green-400">Dr Pay</th>
+              <th className="px-4 py-3 text-right text-red-400">Total Exp</th>
+              <th className="px-4 py-3 text-right text-white bg-blue-900">Net Added</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 text-[11px] font-medium whitespace-nowrap">
+            {filteredTrips.map((t: any) => {
+              const totalExp = (Number(t.loadingCharge) || 0) + (Number(t.unloadingCharge) || 0) + (Number(t.weighbridgeCharge) || 0) + (Number(t.expense) || 0) + (Number(t.driverTripPay) || 0);
+              const netAdded = (Number(t.driverTripPay) || 0) - ((Number(t.advance) || 0) - ((Number(t.loadingCharge) || 0) + (Number(t.unloadingCharge) || 0) + (Number(t.weighbridgeCharge) || 0) + (Number(t.expense) || 0)));
+              return (
+                <tr key={t.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-4 py-3 font-bold text-slate-700">{t.date}</td>
+                  <td className="px-4 py-3 font-mono text-slate-500">{t.billNo}</td>
+                  <td className="px-4 py-3 font-bold text-blue-600">{t.regNumber}</td>
+                  <td className="px-4 py-3 text-slate-600">➔ {t.to}</td>
+                  <td className="px-4 py-3 font-bold text-slate-800">{t.loadType}</td>
+                  <td className="px-4 py-3 text-center"><span className="bg-blue-50 text-blue-700 px-2 py-1 rounded font-extrabold">{t.netWeight} T</span></td>
+                  <td className="px-4 py-3 text-right text-orange-600 font-bold">₹{Number(t.advance).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3 text-center bg-slate-50/30">{t.loadingCharge} / {t.unloadingCharge}</td>
+                  <td className="px-4 py-3 text-center bg-red-50/10">{t.weighbridgeCharge} / <span className="text-red-500">{t.expense}</span></td>
+                  <td className="px-4 py-3 text-right text-green-600 font-bold">₹{Number(t.driverTripPay).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3 text-right text-red-600 font-bold bg-red-50/30">₹{totalExp.toLocaleString('en-IN')}</td>
+                  <td className={`px-4 py-3 text-right font-bold border-l border-slate-100 ${netAdded >= 0 ? 'text-emerald-600 bg-emerald-50/10' : 'text-red-600 bg-red-50/10'}`}>₹{netAdded.toLocaleString('en-IN')}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
 
 const ActionButton = ({ icon, label, color, onClick }: any) => <button onClick={onClick} className="flex flex-col items-center justify-center py-3 hover:bg-white active:bg-slate-100 transition-colors group"><div className={`${color} mb-1 transition-transform group-hover:scale-110`}>{icon}</div><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide group-hover:text-slate-700">{label}</span></button>;
 const SidebarItem = ({ icon, label, active, onClick }: any) => <button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${active ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>{icon} {label}</button>;
