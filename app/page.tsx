@@ -1243,10 +1243,10 @@ if (field === 'netWeight') {
                  </div>
                  <div className="flex justify-between items-center pt-2 border-t border-slate-200">
                     <span className="text-sm font-bold text-slate-600">Calculated Pay:</span>
-                    <span className="text-lg font-bold text-green-600">₹ {tripForm.driverTripPay.toLocaleString()}</span>
+                    <span className="text-lg font-bold text-green-600">₹ {tripForm.driverTripPay.toLocaleString('en-IN')}</span>
                  </div>
               </div>
-              <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex justify-between items-center"><div className="flex items-center gap-2 text-blue-800"><Calculator size={16}/> <span className="text-xs font-bold uppercase">Total Rent (Auto)</span></div><span className="text-lg font-bold text-slate-900">₹ {tripForm.tripTotal.toLocaleString()}</span></div>
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex justify-between items-center"><div className="flex items-center gap-2 text-blue-800"><Calculator size={16}/> <span className="text-xs font-bold uppercase">Total Rent (Auto)</span></div><span className="text-lg font-bold text-slate-900">₹ {tripForm.tripTotal.toLocaleString('en-IN')}</span></div>
               <button disabled={isSubmitting} type="submit" className={`w-full text-white py-3 rounded-lg font-bold mt-2 ${isSubmitting ? 'bg-slate-400' : (editingTripId ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700')}`}>{isSubmitting ? 'Saving...' : (editingTripId ? 'Update Edited Details' : 'Save Trip & Update Rent')}</button>
           </form>
         </ModalWrapper>
@@ -1444,7 +1444,7 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
                           <td className="px-4 py-3 text-xs">{trip.from} ➔ {trip.to}</td>
                           <td className="px-4 py-3 font-bold">{trip.netWeight}</td>
                           <td className="px-4 py-3">₹{trip.rate}</td>
-                          <td className="px-4 py-3 font-bold text-slate-800">₹ {trip.tripTotal.toLocaleString()}</td>
+                          <td className="px-4 py-3 font-bold text-slate-800">₹ {trip.tripTotal.toLocaleString('en-IN')}</td>
                           <td className="px-4 py-3 bg-blue-50/30">
                              <div className="flex items-center gap-1">
                                  <span className="text-slate-400">₹</span>
@@ -1529,15 +1529,15 @@ const FuelView = ({ trips, filterReg, setFilterReg, setTrips }: any) => {
       <div className="grid grid-cols-3 gap-4 max-w-2xl">
          <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl">
             <div className="text-orange-600 font-bold text-xs uppercase mb-1">Total Fuel Cost</div>
-            <div className="text-2xl font-bold text-slate-800">₹ {totalFuelCost.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-slate-800">₹ {totalFuelCost.toLocaleString('en-IN')}</div>
          </div>
          <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl">
             <div className="text-blue-600 font-bold text-xs uppercase mb-1">Total Liters</div>
-            <div className="text-2xl font-bold text-slate-800">{totalLiters.toLocaleString()} L</div>
+            <div className="text-2xl font-bold text-slate-800">{totalLiters.toLocaleString('en-IN')} L</div>
          </div>
          <div className="bg-red-50 border border-red-100 p-4 rounded-xl">
             <div className="text-red-600 font-bold text-xs uppercase mb-1">Pending Payment</div>
-            <div className="text-2xl font-bold text-slate-800">₹ {remainingPayment.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-slate-800">₹ {remainingPayment.toLocaleString('en-IN')}</div>
          </div>
       </div>
 
@@ -1564,7 +1564,7 @@ const FuelView = ({ trips, filterReg, setFilterReg, setTrips }: any) => {
                   <td className="px-6 py-4 text-slate-500">{trip.from} ➔ {trip.to}</td>
                   {/* KM Data Cell Removed */}
                   <td className="px-6 py-4 text-right font-mono">{trip.dieselLiters || '-'} L</td>
-                  <td className="px-6 py-4 text-right font-bold text-orange-600">₹ {Number(trip.dieselPrice).toLocaleString()}</td>
+                  <td className="px-6 py-4 text-right font-bold text-orange-600">₹ {Number(trip.dieselPrice).toLocaleString('en-IN')}</td>
                   <td className="px-6 py-4">
                     <input 
                       type="date" 
@@ -1694,16 +1694,16 @@ const TripsView = ({ trips, handleFilterSelect, handleDeleteTrip }: any) => {
           <td className="px-4 py-3">{trip.loadType}</td>
           <td className="px-4 py-3">{trip.netWeight}</td>
           <td className="px-4 py-3">₹{trip.rate}</td>
-          <td className="px-4 py-3 font-bold text-blue-700 bg-blue-50/50">₹{(trip.tripTotal || 0).toLocaleString()}</td>
+          <td className="px-4 py-3 font-bold text-blue-700 bg-blue-50/50">₹{(trip.tripTotal || 0).toLocaleString('en-IN')}</td>
           <td className="px-4 py-3 text-blue-600 font-medium">₹{trip.advance}</td>
-          <td className="px-4 py-3 bg-indigo-50/30 font-mono">₹{Number(trip.expense || 0).toLocaleString()}</td>
+          <td className="px-4 py-3 bg-indigo-50/30 font-mono">₹{Number(trip.expense || 0).toLocaleString('en-IN')}</td>
           <td className="px-4 py-3 text-red-500">{trip.loadingCharge} / {trip.unloadingCharge}</td>
           <td className="px-4 py-3 bg-orange-50/30">{trip.dieselLiters} L</td>
           <td className="px-4 py-3 bg-orange-50/30">₹{trip.dieselPrice}</td>
           <td className="px-4 py-3">₹{trip.weighbridgeCharge}</td>
-          <td className="px-4 py-3 text-green-600">₹{(trip.driverTripPay || 0).toLocaleString()}</td>
-          <td className="px-4 py-3 font-bold text-red-700 bg-red-50/50">₹{totalExpense.toLocaleString()}</td>
-          <td className={`px-4 py-3 font-bold bg-slate-50/50 text-right ${profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>₹{profit.toLocaleString()}</td>
+          <td className="px-4 py-3 text-green-600">₹{(trip.driverTripPay || 0).toLocaleString('en-IN')}</td>
+          <td className="px-4 py-3 font-bold text-red-700 bg-red-50/50">₹{totalExpense.toLocaleString('en-IN')}</td>
+          <td className={`px-4 py-3 font-bold bg-slate-50/50 text-right ${profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>₹{profit.toLocaleString('en-IN')}</td>
           <td className="px-4 py-3 text-center">
             <button onClick={() => handleDeleteTrip(trip.id)} className="p-2 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors" title="Delete Trip">
               <Trash2 size={16} />
@@ -1792,7 +1792,7 @@ const DriversView = ({ drivers, setDrivers, trips, setTrips, currentUser }: any)
                     <td className="px-6 py-4 text-slate-600 font-mono uppercase">{driver.license}</td>
                     <td className="px-6 py-4 text-right">
                       <span className={`py-1 px-3 rounded-full font-bold text-xs ${netAdded >= 0 ? 'bg-blue-50 text-blue-700' : 'bg-green-100 text-green-700'}`}>
-                        ₹ {netAdded.toLocaleString()}
+                        ₹ {netAdded.toLocaleString('en-IN')}
                       </span>
                     </td>
                     <td className="px-6 py-4 flex justify-center items-center gap-4">
@@ -1902,20 +1902,20 @@ const totalExpenses = Math.round(
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:grid-cols-4">
           <div className="bg-gradient-to-br from-indigo-500 to-blue-600 p-4 rounded-xl shadow-lg text-white">
              <div className="flex items-center gap-2 opacity-80 font-bold text-[10px] uppercase tracking-wider mb-1"><Briefcase size={14}/> Revenue</div>
-             <div className="text-xl font-extrabold tracking-tight">₹ {totalRentRevenue.toLocaleString()}</div>
+             <div className="text-xl font-extrabold tracking-tight">₹ {totalRentRevenue.toLocaleString('en-IN')}</div>
           </div>
           <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-orange-500">
              <div className="flex items-center gap-2 text-orange-600 font-bold text-[10px] uppercase tracking-wider mb-1"><Droplet size={14}/> Total Fuel</div>
-             <div className="text-xl font-extrabold text-slate-800">{totalFuelLiters.toLocaleString()} L</div>
+             <div className="text-xl font-extrabold text-slate-800">{totalFuelLiters.toLocaleString('en-IN')} L</div>
           </div>
           <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-red-500">
             <div className="flex items-center gap-2 text-red-600 font-bold text-[10px] uppercase tracking-wider mb-1"><Receipt size={14}/> Total Expense</div>
-            <div className="text-xl font-extrabold text-slate-800">₹ {totalExpenses.toLocaleString()}</div>
+            <div className="text-xl font-extrabold text-slate-800">₹ {totalExpenses.toLocaleString('en-IN')}</div>
             <div className="text-[9px] text-slate-400 mt-1 font-medium leading-tight">Load+Unload+Fuel+Weight+DrPay</div>
           </div>
           <div className="bg-gradient-to-br from-emerald-500 to-green-600 p-4 rounded-xl shadow-lg text-white">
             <div className="flex items-center gap-2 opacity-80 font-bold text-[10px] uppercase tracking-wider mb-1"><TrendingUp size={14}/> Net Profit</div>
-            <div className="text-xl font-extrabold tracking-tight">₹ {totalProfit.toLocaleString()}</div>
+            <div className="text-xl font-extrabold tracking-tight">₹ {totalProfit.toLocaleString('en-IN')}</div>
           </div>
         </div>
         
@@ -1994,20 +1994,20 @@ const totalExpenses = Math.round(
           
           {/* Use defined tripTotal */}
           <td className="px-3 py-2 border-r border-slate-50 font-bold text-blue-700 bg-blue-50/50">
-            ₹{tripTotal.toLocaleString()}
+            ₹{tripTotal.toLocaleString('en-IN')}
           </td>
           
           <td className="px-3 py-2 border-r border-slate-50 text-right text-orange-600 font-semibold">₹{trip.advance}</td>
           <td className="px-3 py-2 border-r border-slate-50 text-right text-slate-600">₹{trip.weighbridgeCharge}</td>
           
           {/* Expense Section Reordered */}
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-500 font-bold">₹{Number(trip.loadingCharge || 0).toLocaleString()}</td>
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-500 font-bold">₹{Number(trip.unloadingCharge || 0).toLocaleString()}</td>
-          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-600 font-bold bg-red-50/50">₹{Number(trip.expense || 0).toLocaleString()}</td>
+          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-500 font-bold">₹{Number(trip.loadingCharge || 0).toLocaleString('en-IN')}</td>
+          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-500 font-bold">₹{Number(trip.unloadingCharge || 0).toLocaleString('en-IN')}</td>
+          <td className="px-3 py-2 border-r border-slate-50 text-right text-red-600 font-bold bg-red-50/50">₹{Number(trip.expense || 0).toLocaleString('en-IN')}</td>
 
           {/* Use defined drPay */}
           <td className="px-3 py-2 border-r border-slate-50 text-right text-green-600 font-bold bg-green-50/30">
-            ₹{drPay.toLocaleString()}
+            ₹{drPay.toLocaleString('en-IN')}
           </td>
           
           <td className="px-3 py-2 border-r border-slate-50 text-right text-slate-600">{trip.dieselLiters} L</td>
@@ -2015,12 +2015,12 @@ const totalExpenses = Math.round(
           
           {/* Use defined tripExpense */}
           <td className="px-3 py-2 border-r border-slate-50 text-right text-red-600 font-bold bg-red-50/30">
-            ₹{tripExpense.toLocaleString()}
+            ₹{tripExpense.toLocaleString('en-IN')}
           </td>
           
           {/* Use defined tripProfit */}
           <td className={`px-3 py-2 text-right font-extrabold ${tripProfit >= 0 ? 'text-emerald-600 bg-emerald-50/50' : 'text-red-600 bg-red-50/50'}`}>
-            ₹{tripProfit.toLocaleString()}
+            ₹{tripProfit.toLocaleString('en-IN')}
           </td>
           
           <td className="px-2 py-3 text-center no-print">
@@ -2212,7 +2212,7 @@ const handleRetrieveSettlement = async (log: WeeklyHistory) => {
                       </div>
                       <div className="bg-white p-3 rounded-lg border border-slate-200">
                          <span className="text-[10px] font-bold text-slate-400 uppercase">Total Amount</span>
-                         <div className="text-green-600 font-bold text-lg">₹ {log.totalExpense.toLocaleString()}</div>
+                         <div className="text-green-600 font-bold text-lg">₹ {log.totalExpense.toLocaleString('en-IN')}</div>
                       </div>
                       <div className="bg-white p-3 rounded-lg border border-slate-200">
                          <span className="text-[10px] font-bold text-slate-400 uppercase">Total Trips</span>
@@ -2287,22 +2287,22 @@ const handleRetrieveSettlement = async (log: WeeklyHistory) => {
                                    </div>
                                  </td>
                                  <td className="px-5 py-4 text-indigo-600 font-bold">
-                                   ₹ {advance.toLocaleString()}
+                                   ₹ {advance.toLocaleString('en-IN')}
                                  </td>
                                  <td className="px-5 py-4 text-red-600">
-                                   <div className="font-bold">₹ {totalTripExpenses.toLocaleString()}</div>
+                                   <div className="font-bold">₹ {totalTripExpenses.toLocaleString('en-IN')}</div>
                                    <div className="text-[10px] text-slate-400 mt-0.5 font-mono">
                                      L:{loadChg} / U:{unloadChg} / W:{weightChg}
                                    </div>
                                  </td>
                                  <td className="px-5 py-4 text-slate-600 font-medium">
-                                   ₹ {tripRent.toLocaleString()}
+                                   ₹ {tripRent.toLocaleString('en-IN')}
                                  </td>
                                  <td className="px-5 py-4 text-green-700 font-bold">
-                                   ₹ {drPay.toLocaleString()}
+                                   ₹ {drPay.toLocaleString('en-IN')}
                                  </td>
                                  <td className="px-5 py-4 bg-blue-50 border-l border-blue-100 text-blue-700 font-extrabold text-right">
-                                   ₹ {finalPay.toLocaleString()}
+                                   ₹ {finalPay.toLocaleString('en-IN')}
                                  </td>
                                </tr>
                              );
@@ -2691,7 +2691,7 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
                     <h2 className="text-xl font-bold text-slate-800">{driver.name}</h2>
                     <div className="text-xs text-slate-500 font-mono flex items-center gap-2">
                         Total Balance: <span className={calculatedNetAdded >= 0 ? "text-green-600" : "text-red-600"}>
-                          ₹{calculatedNetAdded.toLocaleString()}
+                          ₹{calculatedNetAdded.toLocaleString('en-IN')}
                         </span>
                         {localWalletBalance !== 0 && (
                           <button 
@@ -2775,25 +2775,25 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
     {/* 1. Total Advances */}
     <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
         <div className="text-xs font-bold text-slate-400 uppercase">Total Advances</div>
-        <div className="text-xl font-bold text-orange-600">₹ {totalAdvance.toLocaleString()}</div>
+        <div className="text-xl font-bold text-orange-600">₹ {totalAdvance.toLocaleString('en-IN')}</div>
     </div>
 
     {/* 2. L/U/W Sum */}
     <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
         <div className="text-xs font-bold text-slate-400 uppercase">L/U/W Sum</div>
-        <div className="text-xl font-bold text-red-600">₹ {(totalLoadingCharge + totalUnloadingCharge + totalWeighbridgeCharge).toLocaleString()}</div>
+        <div className="text-xl font-bold text-red-600">₹ {(totalLoadingCharge + totalUnloadingCharge + totalWeighbridgeCharge).toLocaleString('en-IN')}</div>
     </div>
 
     {/* 3. Extra Exp */}
     <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
         <div className="text-xs font-bold text-slate-400 uppercase">Extra Exp</div>
-        <div className="text-xl font-bold text-red-600">₹ {totalExtraExpense.toLocaleString()}</div>
+        <div className="text-xl font-bold text-red-600">₹ {totalExtraExpense.toLocaleString('en-IN')}</div>
     </div>
 
     {/* 4. Gross Pay */}
     <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
         <div className="text-xs font-bold text-slate-400 uppercase">Gross Pay</div>
-        <div className="text-xl font-bold text-slate-800">₹ {totalGrossPay.toLocaleString()}</div>
+        <div className="text-xl font-bold text-slate-800">₹ {totalGrossPay.toLocaleString('en-IN')}</div>
     </div>
 
     {/* 5. Net Added (Result of New Formula) */}
@@ -2801,7 +2801,7 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
 <div className="bg-white p-4 rounded-xl border-l-4 border-l-indigo-600 shadow-md">
     <div className="text-xs font-bold text-slate-400 uppercase">Net Added</div>
     <div className={`text-2xl font-bold ${selectedTripsSum >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-      ₹ {selectedTripsSum.toLocaleString()}
+      ₹ {selectedTripsSum.toLocaleString('en-IN')}
     </div>
 </div>
 </div>
@@ -2864,11 +2864,11 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
     </span>
 </td>
                             <td className="px-4 py-3 text-right text-orange-600 font-bold">
-                                ₹{h.advance.toLocaleString()}
+                                ₹{h.advance.toLocaleString('en-IN')}
                             </td>
                             {/* SEPARATE WEIGHBRIDGE CHARGE */}
                             <td className="px-4 py-3 text-right text-red-600 font-bold">
-                                ₹{h.weighbridgeCharge.toLocaleString()}
+                                ₹{h.weighbridgeCharge.toLocaleString('en-IN')}
                             </td>
                             <td className="px-4 py-3 text-center bg-slate-50/50">
                                 <div className="flex flex-col items-center">
@@ -2881,15 +2881,15 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
                                 </div>
                             </td>
                             <td className="px-4 py-3 text-right text-green-600 font-bold">
-                                ₹{h.driverTripPay.toLocaleString()}
+                                ₹{h.driverTripPay.toLocaleString('en-IN')}
                             </td>
                             <td className="px-4 py-3 text-right text-red-600 font-bold bg-red-50/30">
-                                ₹{h.totalExpenses.toLocaleString()}
+                                ₹{h.totalExpenses.toLocaleString('en-IN')}
                             </td>
                             <td className={`px-4 py-3 text-right font-bold border-l border-slate-100 ${
                                 netAddedValue >= 0 ? 'text-emerald-600 bg-emerald-50/10' : 'text-red-600 bg-red-50/10'
                             }`}>
-                                ₹{netAddedValue.toLocaleString()}
+                                ₹{netAddedValue.toLocaleString('en-IN')}
                             </td>
                         </tr>
                     );
