@@ -2815,86 +2815,70 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
     <div className="overflow-x-auto">
         <table className="w-full text-sm text-left">
             <thead className="bg-slate-800 text-slate-300 font-bold uppercase text-[10px] whitespace-nowrap">
-                <tr>
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Route</th> 
-                    <th className="px-4 py-3">Load Type</th>
-                    {/* Displaying Entered Net Weight */}
-                    <th className="px-4 py-3 text-center bg-slate-700 text-white">Net Weight</th>
-                    <th className="px-4 py-3 text-right text-orange-400">Advance</th>
-                    {/* Dedicated Weighbridge Column */}
-                    <th className="px-4 py-3 text-right text-red-300">Weighbridge</th>
-                    <th className="px-4 py-3 text-center">L / U / E</th>
-                    <th className="px-4 py-3 text-right text-green-400">Dr Pay</th>
-                    <th className="px-4 py-3 text-right text-red-400">Total Exp</th>
-                    <th className="px-4 py-3 text-right text-white bg-blue-900">Net Added</th>
-                </tr>
-            </thead>
+    <tr>
+        <th className="px-4 py-3">Date</th>
+        <th className="px-4 py-3 border-l border-slate-700">Vehicle</th>
+        <th className="px-4 py-3 border-l border-slate-700">Route</th> 
+        <th className="px-4 py-3 border-l border-slate-700">Load Type</th>
+        <th className="px-4 py-3 text-center bg-slate-700 text-white">Net Weight</th>
+        <th className="px-4 py-3 text-right text-orange-400">Advance</th>
+        {/* TOP LEVEL LABELS ONLY */}
+        <th className="px-4 py-3 text-center text-red-300">L / U</th>
+        <th className="px-4 py-3 text-center text-red-400">Web / Exp</th>
+        <th className="px-4 py-3 text-right text-green-400">Dr Pay</th>
+        <th className="px-4 py-3 text-right text-red-400">Total Exp</th>
+        <th className="px-4 py-3 text-right text-white bg-blue-900">Net Added</th>
+    </tr>
+</thead>
             <tbody className="divide-y divide-slate-100 text-[11px] font-medium">
-                {loading ? (
-                    <tr><td colSpan={10} className="p-8 text-center text-slate-400">Loading History...</td></tr>
-                ) : filteredHistory.length === 0 ? (
-                    <tr><td colSpan={10} className="p-8 text-center text-slate-400">No active trips found.</td></tr>
-                ) : filteredHistory.map((h, index) => {
-                    const isSelected = selectedTripIds.has(h.id);
-                    const netAddedValue = h.netAmount; 
+    {loading ? (
+        <tr><td colSpan={11} className="p-8 text-center text-slate-400">Loading History...</td></tr>
+    ) : filteredHistory.length === 0 ? (
+        <tr><td colSpan={11} className="p-8 text-center text-slate-400">No active trips found.</td></tr>
+    ) : filteredHistory.map((h, index) => {
+        const isSelected = selectedTripIds.has(h.id);
+        const netAddedValue = h.netAmount; 
 
-                    return (
-                        <tr 
-                            key={`${h.id}-${index}`} 
-                            onClick={() => !submitting && handleToggleRow(h.id)} 
-                            className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-slate-50'}`}
-                        >
-                            <td className="px-4 py-3 font-bold text-slate-700">
-                                {h.date}
-                            </td>
-                            <td className="px-4 py-3 text-slate-600">
-                                <div className="flex items-center gap-1">
-                                    <span className="text-slate-400">➔</span> {h.to || "N/A"}
-                                </div>
-                            </td>
-                            <td className="px-4 py-3 font-bold text-slate-800">
-                                {h.loadType}
-                            </td>
-                            {/* THE ENTERED NET WEIGHT COLUMN */}
-<td className="px-4 py-3 text-center">
-    <span className="bg-blue-50 text-blue-700 border border-blue-100 px-2 py-1 rounded-md font-extrabold">
-        {/* Use h.netWeight and handle potential null/undefined */}
-        {h.netWeight || h.net_weight || "0"} T
-    </span>
-</td>
-                            <td className="px-4 py-3 text-right text-orange-600 font-bold">
-                                ₹{h.advance.toLocaleString('en-IN')}
-                            </td>
-                            {/* SEPARATE WEIGHBRIDGE CHARGE */}
-                            <td className="px-4 py-3 text-right text-red-600 font-bold">
-                                ₹{h.weighbridgeCharge.toLocaleString('en-IN')}
-                            </td>
-                            <td className="px-4 py-3 text-center bg-slate-50/50">
-                                <div className="flex flex-col items-center">
-                                    <div className="font-mono text-slate-700">
-                                        {h.loadingCharge}/{h.unloadingCharge}/<span className="text-red-500 font-bold">{h.extraExpense}</span>
-                                    </div>
-                                    <div className="text-[8px] text-slate-400 uppercase tracking-widest font-bold mt-0.5">
-                                        L / U / E
-                                    </div>
-                                </div>
-                            </td>
-                            <td className="px-4 py-3 text-right text-green-600 font-bold">
-                                ₹{h.driverTripPay.toLocaleString('en-IN')}
-                            </td>
-                            <td className="px-4 py-3 text-right text-red-600 font-bold bg-red-50/30">
-                                ₹{h.totalExpenses.toLocaleString('en-IN')}
-                            </td>
-                            <td className={`px-4 py-3 text-right font-bold border-l border-slate-100 ${
-                                netAddedValue >= 0 ? 'text-emerald-600 bg-emerald-50/10' : 'text-red-600 bg-red-50/10'
-                            }`}>
-                                ₹{netAddedValue.toLocaleString('en-IN')}
-                            </td>
-                        </tr>
-                    );
-                })}
-            </tbody>
+        return (
+            <tr 
+                key={`${h.id}-${index}`} 
+                onClick={() => !submitting && handleToggleRow(h.id)} 
+                className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-slate-50'}`}
+            >
+                <td className="px-4 py-3 font-bold text-slate-700">{h.date}</td>
+                <td className="px-4 py-3 font-bold text-blue-600">{h.vehicle_reg || h.regNumber || "N/A"}</td>
+                <td className="px-4 py-3 text-slate-600">➔ {h.to || "N/A"}</td>
+                <td className="px-4 py-3 font-bold text-slate-800">{h.loadType}</td>
+                <td className="px-4 py-3 text-center">
+                    <span className="bg-blue-50 text-blue-700 border border-blue-100 px-2 py-1 rounded-md font-extrabold">
+                        {h.netWeight || h.net_weight || "0"} T
+                    </span>
+                </td>
+                <td className="px-4 py-3 text-right text-orange-600 font-bold">₹{h.advance.toLocaleString('en-IN')}</td>
+
+                {/* DISPLAY L / U WITHOUT SUB-LABELS */}
+                <td className="px-4 py-3 text-center bg-slate-50/30">
+                    <div className="font-mono text-slate-700">{h.loadingCharge} / {h.unloadingCharge}</div>
+                </td>
+
+                {/* DISPLAY WEB / EXP WITHOUT SUB-LABELS */}
+                <td className="px-4 py-3 text-center bg-red-50/10">
+                    <div className="font-mono text-slate-700">
+                        {h.weighbridgeCharge} / <span className="text-red-500 font-bold">{h.extraExpense}</span>
+                    </div>
+                </td>
+
+                <td className="px-4 py-3 text-right text-green-600 font-bold">₹{h.driverTripPay.toLocaleString('en-IN')}</td>
+                <td className="px-4 py-3 text-right text-red-600 font-bold bg-red-50/30">₹{h.totalExpenses.toLocaleString('en-IN')}</td>
+                <td className={`px-4 py-3 text-right font-bold border-l border-slate-100 ${
+                    netAddedValue >= 0 ? 'text-emerald-600 bg-emerald-50/10' : 'text-red-600 bg-red-50/10'
+                }`}>
+                    ₹{netAddedValue.toLocaleString('en-IN')}
+                </td>
+            </tr>
+        );
+    })}
+</tbody>
         </table>
     </div>
 </div>
