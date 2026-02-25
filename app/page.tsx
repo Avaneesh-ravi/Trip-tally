@@ -1473,8 +1473,10 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
 };
 
 const FuelView = ({ trips, filterReg, setFilterReg, setTrips }: any) => {
-  
-  // 1. FILTER: Exclude Bill No "0" globally for this page
+  const [editingTrip, setEditingTrip] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // 1. FILTER: Exclude Bill No "0"
   const visibleTrips = trips.filter((t: any) => String(t.billNo) !== "0");
 
   // 2. SORTING
@@ -1482,22 +1484,36 @@ const FuelView = ({ trips, filterReg, setFilterReg, setTrips }: any) => {
   const paidTrips = visibleTrips.filter((t: any) => t.fuelPaidDate).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const sortedTrips = [...unpaidTrips, ...paidTrips];
 
-  // 3. DATE UPDATE FUNCTION
+  // 3. UPDATE HANDLERS
   const handleUpdateFuelDate = async (tripId: number, date: string) => {
     const val = date || null;
     const { error } = await supabase.from('trips').update({ fuel_paid_date: val }).eq('id', tripId);
-    if(error) {
-        alert("Error saving date: " + error.message);
-    } else {
-        if(setTrips) {
-            setTrips((prev: any) => prev.map((t: any) => 
-                t.id === tripId ? { ...t, fuelPaidDate: val } : t
-            ));
-        }
-    }
+    if(error) alert("Error: " + error.message);
+    else setTrips((prev: any) => prev.map((t: any) => t.id === tripId ? { ...t, fuelPaidDate: val } : t));
   };
 
-  // 4. CALCULATIONS
+  const handleSaveFuelEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    
+    const payload = {
+      diesel_liters: Number(editingTrip.dieselLiters),
+      diesel_price: Number(editingTrip.dieselPrice),
+    };
+
+    const { error } = await supabase.from('trips').update(payload).eq('id', editingTrip.id);
+
+    if (error) {
+      alert("Update failed: " + error.message);
+    } else {
+      setTrips((prev: any) => prev.map((t: any) => t.id === editingTrip.id ? { ...t, ...editingTrip } : t));
+      setEditingTrip(null);
+      alert("Fuel record updated!");
+    }
+    setIsSaving(false);
+  };
+
+  // Calculations
   const totalFuelCost = visibleTrips.reduce((acc: number, t: any) => acc + (Number(t.dieselPrice) || 0), 0);
   const totalLiters = visibleTrips.reduce((acc: number, t: any) => acc + (Number(t.dieselLiters) || 0), 0);
   const remainingPayment = unpaidTrips.reduce((acc: number, t: any) => acc + (Number(t.dieselPrice) || 0), 0);
@@ -1509,6 +1525,7 @@ const FuelView = ({ trips, filterReg, setFilterReg, setTrips }: any) => {
         {filterReg && <button onClick={() => setFilterReg(null)} className="text-xs bg-slate-200 hover:bg-slate-300 px-3 py-1 rounded text-slate-700">Clear Filter: {filterReg}</button>}
       </div>
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-4 max-w-2xl">
          <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl">
             <div className="text-orange-600 font-bold text-xs uppercase mb-1">Total Fuel Cost</div>
@@ -1532,40 +1549,76 @@ const FuelView = ({ trips, filterReg, setFilterReg, setTrips }: any) => {
                 <th className="px-6 py-4">Date</th>
                 <th className="px-6 py-4">Vehicle</th>
                 <th className="px-6 py-4">Route</th>
-                <th className="px-6 py-4 text-right">Km</th>
+                {/* KM Column Header Removed */}
                 <th className="px-6 py-4 text-right">Liters</th>
                 <th className="px-6 py-4 text-right">Price</th>
                 <th className="px-6 py-4">Paid On</th>
+                <th className="px-6 py-4 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {sortedTrips.length === 0 ? (
-                <tr><td colSpan={7} className="p-6 text-center text-slate-400">No fuel records found.</td></tr>
-              ) : (
-                sortedTrips.map((trip: any) => (
-                  <tr key={trip.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 font-bold text-slate-700">{trip.date}</td>
-                    <td className="px-6 py-4 font-bold text-blue-600">{trip.regNumber}</td>
-                    <td className="px-6 py-4 text-slate-500">{trip.from} ➔ {trip.to}</td>
-                    <td className="px-6 py-4 text-right font-mono text-slate-600">{trip.expense
- || '-'}</td>
-                    <td className="px-6 py-4 text-right font-mono">{trip.dieselLiters || '-'} L</td>
-                    <td className="px-6 py-4 text-right font-bold text-orange-600">₹ {Number(trip.dieselPrice).toLocaleString()}</td>
-                    <td className="px-6 py-4">
-                      <input 
-                        type="date" 
-                        className={`border p-1 rounded text-xs outline-none ${trip.fuelPaidDate ? 'bg-green-50 border-green-200 text-green-700 font-bold' : 'bg-red-50 border-red-200 text-red-700 font-bold'}`}
-                        defaultValue={trip.fuelPaidDate}
-                        onBlur={(e) => handleUpdateFuelDate(trip.id, e.target.value)}
-                      />
-                    </td>
-                  </tr>
-                ))
-              )}
+              {sortedTrips.map((trip: any) => (
+                <tr key={trip.id} className="hover:bg-slate-50">
+                  <td className="px-6 py-4 font-bold text-slate-700">{trip.date}</td>
+                  <td className="px-6 py-4 font-bold text-blue-600">{trip.regNumber}</td>
+                  <td className="px-6 py-4 text-slate-500">{trip.from} ➔ {trip.to}</td>
+                  {/* KM Data Cell Removed */}
+                  <td className="px-6 py-4 text-right font-mono">{trip.dieselLiters || '-'} L</td>
+                  <td className="px-6 py-4 text-right font-bold text-orange-600">₹ {Number(trip.dieselPrice).toLocaleString()}</td>
+                  <td className="px-6 py-4">
+                    <input 
+                      type="date" 
+                      className={`border p-1 rounded text-xs outline-none ${trip.fuelPaidDate ? 'bg-green-50 border-green-200 text-green-700 font-bold' : 'bg-red-50 border-red-200 text-red-700 font-bold'}`}
+                      defaultValue={trip.fuelPaidDate}
+                      onBlur={(e) => handleUpdateFuelDate(trip.id, e.target.value)}
+                    />
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <button 
+                      onClick={() => setEditingTrip(trip)} 
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    >
+                      <Palette size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* EDIT MODAL WITHOUT KM */}
+      {editingTrip && (
+        <ModalWrapper title={`Edit Fuel: ${editingTrip.regNumber}`} onClose={() => setEditingTrip(null)}>
+          <form onSubmit={handleSaveFuelEdit} className="space-y-4">
+            <div className="p-3 bg-blue-50 text-blue-700 text-[10px] font-bold uppercase rounded border border-blue-100">
+              Bill No: {editingTrip.billNo} | Date: {editingTrip.date}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Input 
+                label="Diesel Liters" 
+                type="number" 
+                value={editingTrip.dieselLiters} 
+                onChange={(e) => setEditingTrip({...editingTrip, dieselLiters: e.target.value})} 
+              />
+              <Input 
+                label="Fuel Total Price (₹)" 
+                type="number" 
+                value={editingTrip.dieselPrice} 
+                onChange={(e) => setEditingTrip({...editingTrip, dieselPrice: e.target.value})} 
+              />
+            </div>
+            <button 
+              disabled={isSaving}
+              type="submit" 
+              className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition-all active:scale-95"
+            >
+              {isSaving ? "Saving..." : "Update Fuel Data"}
+            </button>
+          </form>
+        </ModalWrapper>
+      )}
     </div>
   );
 };
