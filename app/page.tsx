@@ -603,7 +603,11 @@ export default function LMSApp() {
       {/* DESKTOP SIDEBAR */}
       <aside className="hidden md:flex flex-col w-64 bg-slate-900 text-white transition-all">
         <div className="p-6 border-b border-slate-800">
-          <h1 className="text-2xl font-bold flex items-center gap-2"><Truck className="text-blue-500" /> <span className="tracking-tight">Trip Tally</span></h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+    {/* Replace <Truck /> with an <img> tag */}
+    <img src="/logo.png" alt="Anjaneya Logo" className="w-8 h-8 object-contain rounded" /> 
+    <span className="tracking-tight">Anjaneya</span>
+  </h1>
           <div className="mt-4 p-3 bg-slate-800/50 rounded-xl border border-slate-700/50 backdrop-blur-md animate-in fade-in slide-in-from-left-4 duration-700">
              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Active User
