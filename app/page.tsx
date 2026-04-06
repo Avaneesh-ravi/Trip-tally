@@ -1759,11 +1759,50 @@ const TripsView = ({ trips, setTrips, handleFilterSelect, handleDeleteTrip }: an
     </div>
   );
 };
-
 const DriversView = ({ drivers, setDrivers, trips, setTrips, currentUser }: any) => {
   const [isAdding, setIsAdding] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+  const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
+  const [editDriverForm, setEditDriverForm] = useState({ name: '', phone: '', license: '' });
   const [newDriver, setNewDriver] = useState({ name: "", phone: "", license: "", walletBalance: 0 });
+
+  useEffect(() => {
+    if (editingDriver) {
+      setEditDriverForm({
+        name: editingDriver.name,
+        phone: editingDriver.phone,
+        license: editingDriver.license,
+      });
+    }
+  }, [editingDriver]);
+
+  const handleUpdateDriver = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDriver) return;
+
+    const { error } = await supabase
+      .from('drivers')
+      .update({
+        name: editDriverForm.name,
+        phone: editDriverForm.phone,
+        license: editDriverForm.license.toUpperCase(),
+      })
+      .eq('id', editingDriver.id);
+
+    if (error) {
+      alert("Error updating driver: " + error.message);
+    } else {
+      setDrivers((prev: Driver[]) =>
+        prev.map(d =>
+          d.id === editingDriver.id
+            ? { ...d, name: editDriverForm.name, phone: editDriverForm.phone, license: editDriverForm.license.toUpperCase() }
+            : d
+        )
+      );
+      setEditingDriver(null);
+      alert("Driver updated successfully!");
+    }
+  };
 
   const handleAddDriver = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1821,7 +1860,7 @@ const DriversView = ({ drivers, setDrivers, trips, setTrips, currentUser }: any)
                 <th className="px-6 py-4 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+   <tbody className="divide-y divide-slate-100">
               
               {drivers.map((driver: Driver) => {
                 const netAdded = -driver.walletBalance; 
@@ -1835,8 +1874,14 @@ const DriversView = ({ drivers, setDrivers, trips, setTrips, currentUser }: any)
                         ₹ {netAdded.toLocaleString('en-IN')}
                       </span>
                     </td>
-                    <td className="px-6 py-4 flex justify-center items-center gap-4">
+                    <td className="px-6 py-4 flex justify-center items-center gap-3">
                       {driver.walletBalance > 0 && (<button onClick={(e) => handleSettleDriver(driver.id, driver.name, driver.walletBalance, e)} className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-md text-xs font-bold transition-all shadow-sm z-10"><RefreshCw size={12} /> Settle</button>)}
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setEditingDriver(driver); }}
+                        className="flex items-center gap-1 bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-md text-xs font-bold transition-all border border-blue-200 z-10"
+                      >
+                        <Palette size={12}/> Edit
+                      </button>
                       <ChevronRight size={16} className="text-slate-400" />
                     </td>
                   </tr>
@@ -1846,8 +1891,111 @@ const DriversView = ({ drivers, setDrivers, trips, setTrips, currentUser }: any)
           </table>
         </div>
       </div>
-      {selectedDriver && <DriverDetailsModal driver={selectedDriver} setDrivers={setDrivers} onClose={() => setSelectedDriver(null)} currentUser={currentUser} />}
+ {selectedDriver && <DriverDetailsModal driver={selectedDriver} setDrivers={setDrivers} onClose={() => setSelectedDriver(null)} currentUser={currentUser} />}
       {isAdding && (<ModalWrapper title="Register Driver" onClose={() => setIsAdding(false)}><form onSubmit={handleAddDriver} className="space-y-4"><Input label="Name" value={newDriver.name} onChange={(e) => setNewDriver({...newDriver, name: e.target.value})} required /><Input label="Phone" value={newDriver.phone} onChange={(e) => setNewDriver({...newDriver, phone: e.target.value})} required /><Input label="License" value={newDriver.license} onChange={(e) => setNewDriver({...newDriver, license: e.target.value})} uppercase required /><button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold">Save Driver to Database</button></form></ModalWrapper>)}
+
+      {/* --- EDIT DRIVER MODAL --- */}
+      {editingDriver && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl animate-in zoom-in-95 overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-xl backdrop-blur-sm">
+                    {editingDriver.name.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">{editingDriver.name}</h3>
+                    <p className="text-blue-100 text-xs mt-0.5">Edit Driver Profile</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setEditingDriver(null)} 
+                  className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X size={18}/>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleUpdateDriver} className="p-6 space-y-5">
+              
+              {/* Name Field */}
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block flex items-center gap-1.5">
+                  <UserCircle size={12}/> Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  className="w-full border border-slate-300 p-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
+                  placeholder="Enter driver name"
+                  value={editDriverForm.name}
+                  onChange={(e) => setEditDriverForm({...editDriverForm, name: e.target.value})}
+                />
+              </div>
+
+              {/* Phone Field */}
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block flex items-center gap-1.5">
+                  📞 Phone Number
+                </label>
+                <input
+                  type="tel"
+                  required
+                  className="w-full border border-slate-300 p-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
+                  placeholder="Enter phone number"
+                  value={editDriverForm.phone}
+                  onChange={(e) => setEditDriverForm({...editDriverForm, phone: e.target.value})}
+                />
+              </div>
+
+              {/* License Field */}
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block flex items-center gap-1.5">
+                  🪪 License Number
+                </label>
+                <input
+                  type="text"
+                  required
+                  className="w-full border border-slate-300 p-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium uppercase tracking-widest"
+                  placeholder="Enter license number"
+                  value={editDriverForm.license}
+                  onChange={(e) => setEditDriverForm({...editDriverForm, license: e.target.value.toUpperCase()})}
+                />
+              </div>
+
+              {/* Info Box */}
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
+                <span className="text-amber-500 text-sm mt-0.5">⚠️</span>
+                <p className="text-xs text-amber-700 font-medium">
+                  Wallet balance and trip history will not be affected by this update.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setEditingDriver(null)}
+                  className="flex-1 border border-slate-300 text-slate-600 py-3 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-2 flex-grow bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-xl font-bold text-sm shadow-md shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <RefreshCw size={14}/> Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
