@@ -749,11 +749,10 @@ const DashboardView = ({ vehicles, setVehicles, drivers, setDrivers, transaction
     insuranceValidUpto: '', fitnessValidUpto: '', puccNo: '', puccValidUpto: '',
     permitValidUpto: '', nationalPermitNo: '', nationalPermitValidUpto: '', registeringAuthority: '', greenTax: ''
   });
-
-  const [tripForm, setTripForm] = useState({ 
+const [tripForm, setTripForm] = useState({ 
   date: '', billNo: '', driverName: '', to: '', contractor: '', 
   loadType: '', netWeight: '', rate: 0, tripTotal: 0,
-  loadingCharge: '500',
+  loadingCharge: '',
   unloadingCharge: '0',
   driverTripPay: 0, 
   dieselPrice: '0', 
@@ -854,7 +853,7 @@ const DashboardView = ({ vehicles, setVehicles, drivers, setDrivers, transaction
       setTripForm({ 
         
         ...vehicle.currentTrip, 
-        loadingCharge: vehicle.currentTrip.loadingCharge || '500', 
+        loadingCharge: vehicle.currentTrip.loadingCharge || '', 
       weighbridgeCharge: vehicle.currentTrip.weighbridgeCharge || '130',
       commissionType: vehicle.currentTrip.commissionType || 'percentage',
       commissionValue: vehicle.currentTrip.commissionValue || '15',
@@ -965,7 +964,7 @@ if (field === 'netWeight') {
         driverTripPay: 0, advance: '0'
       };
     } else if (value !== '' && tripForm.billNo === '0') {
-      updatedForm.loadingCharge = '500';
+      updatedForm.loadingCharge = '';
       updatedForm.weighbridgeCharge = '130';
     }
   }
