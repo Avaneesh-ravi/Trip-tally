@@ -100,12 +100,12 @@ interface VehicleDetails {
   permitValidUpto: string; nationalPermitNo: string; nationalPermitValidUpto: string;
   registeringAuthority: string; greenTax: string;
 }
-
 interface TripRecord {
   id: number;
   regNumber: string;
   date: string;
   billNo: string;
+  billReceived?: boolean;
   driverName: string;
   from: string;
   to: string;
@@ -433,7 +433,7 @@ export default function LMSApp() {
         .eq('user_id', currentUser.id)
         .order('date', { ascending: false });
 
-      if (tData) {
+if (tData) {
         setTrips(tData.map((t: any) => ({
           id: t.id,
           date: t.date,
@@ -446,7 +446,6 @@ export default function LMSApp() {
           loadType: t.load_type,
           netWeight: t.net_weight,
           expense: t.expense || 0,
-
           rate: t.rate,
           tripTotal: t.trip_total,
           driverTripPay: t.driver_trip_pay,
@@ -460,7 +459,8 @@ export default function LMSApp() {
           commissionValue: t.commission_value,
           fuelPaidDate: t.fuel_paid_date,
           contractorPaidDate: t.contractor_paid_date,
-          creditedAmount: t.credited_amount // NEW FIELD
+          creditedAmount: t.credited_amount,
+          billReceived: t.bill_received ?? false
         })));
       }
 
@@ -581,7 +581,7 @@ export default function LMSApp() {
 
     switch(currentView) {
       case "dashboard": return <DashboardView {...props} />;
-      case "trips": return <TripsView {...props} />;
+     case "trips": return <TripsView {...props} setTrips={props.setTrips} />;
       case "drivers": return <DriversView {...props} />;
       
       case "finance": return <FinanceView {...props} />;
@@ -749,11 +749,11 @@ const DashboardView = ({ vehicles, setVehicles, drivers, setDrivers, transaction
     insuranceValidUpto: '', fitnessValidUpto: '', puccNo: '', puccValidUpto: '',
     permitValidUpto: '', nationalPermitNo: '', nationalPermitValidUpto: '', registeringAuthority: '', greenTax: ''
   });
-    
-const [tripForm, setTripForm] = useState({ 
+
+  const [tripForm, setTripForm] = useState({ 
   date: '', billNo: '', driverName: '', to: '', contractor: '', 
   loadType: '', netWeight: '', rate: 0, tripTotal: 0,
-  loadingCharge: '500',           // ✅ PRE-FILLED DEFAULT
+  loadingCharge: '500',
   unloadingCharge: '0',
   driverTripPay: 0, 
   dieselPrice: '0', 
@@ -763,7 +763,8 @@ const [tripForm, setTripForm] = useState({
   expense: '0',
   commissionType: 'percentage' as 'percentage' | 'fixed', 
   commissionValue: '15',
-  advance: '0'
+  advance: '0',
+  billReceived: false
 });
 
     
@@ -1011,8 +1012,7 @@ if (field === 'netWeight') {
       setIsSubmitting(false);
       return; 
     }
-
-    const dbTrip = {
+const dbTrip = {
         date: tripForm.date, 
         bill_no: tripForm.billNo, 
         vehicle_reg: currentVehicle.regNumber, 
@@ -1033,9 +1033,10 @@ if (field === 'netWeight') {
         diesel_liters: Number(tripForm.dieselLiters) || 0, 
         diesel_price: Number(tripForm.dieselPrice) || 0, 
         driver_trip_pay: grossPay, 
-        final_pay: finalPay, // This uses the new formula
+        final_pay: finalPay,
         commission_type: tripForm.commissionType, 
         commission_value: tripForm.commissionValue,
+        bill_received: tripForm.billReceived,
         status: 'active'
     };
     if (editingTripId) {
@@ -1257,9 +1258,23 @@ if (field === 'netWeight') {
                     <span className="text-lg font-bold text-green-600">₹ {tripForm.driverTripPay.toLocaleString('en-IN')}</span>
                  </div>
               </div>
-              <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex justify-between items-center"><div className="flex items-center gap-2 text-blue-800"><Calculator size={16}/> <span className="text-xs font-bold uppercase">Total Rent (Auto)</span></div><span className="text-lg font-bold text-slate-900">₹ {tripForm.tripTotal.toLocaleString('en-IN')}</span></div>
-              <button disabled={isSubmitting} type="submit" className={`w-full text-white py-3 rounded-lg font-bold mt-2 ${isSubmitting ? 'bg-slate-400' : (editingTripId ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700')}`}>{isSubmitting ? 'Saving...' : (editingTripId ? 'Update Edited Details' : 'Save Trip & Update Rent')}</button>
-          </form>
+           <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex justify-between items-center"><div className="flex items-center gap-2 text-blue-800"><Calculator size={16}/> <span className="text-xs font-bold uppercase">Total Rent (Auto)</span></div><span className="text-lg font-bold text-slate-900">₹ {tripForm.tripTotal.toLocaleString('en-IN')}</span></div>
+              
+              <div className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${tripForm.billReceived ? 'bg-green-50 border-green-400' : 'bg-red-50 border-red-300'}`} onClick={() => setTripForm(prev => ({...prev, billReceived: !prev.billReceived}))}>
+                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${tripForm.billReceived ? 'bg-green-500 border-green-500' : 'border-red-400 bg-white'}`}>
+                  {tripForm.billReceived && <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                </div>
+                <div>
+                  <div className={`text-sm font-bold ${tripForm.billReceived ? 'text-green-700' : 'text-red-600'}`}>
+                    {tripForm.billReceived ? '✓ Bill Received' : 'Bill Not Received'}
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    {tripForm.billReceived ? 'Trip will appear normally in logs' : 'Trip will be highlighted red in logs'}
+                  </div>
+                </div>
+              </div>
+
+              <button disabled={isSubmitting} type="submit" className={`w-full text-white py-3 rounded-lg font-bold mt-2 ${isSubmitting ? 'bg-slate-400' : (editingTripId ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700')}`}>{isSubmitting ? 'Saving...' : (editingTripId ? 'Update Edited Details' : 'Save Trip & Update Rent')}</button>     </form>
         </ModalWrapper>
       )}
 
@@ -1633,10 +1648,15 @@ const FuelView = ({ trips, filterReg, setFilterReg, setTrips }: any) => {
     </div>
   );
 };
-
-const TripsView = ({ trips, handleFilterSelect, handleDeleteTrip }: any) => {
+const TripsView = ({ trips, setTrips, handleFilterSelect, handleDeleteTrip }: any) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+
+  const handleToggleBillReceived = async (tripId: number, current: boolean) => {
+    const newVal = !current;
+    await supabase.from('trips').update({ bill_received: newVal }).eq('id', tripId);
+    setTrips((prev: any[]) => prev.map(t => t.id === tripId ? { ...t, billReceived: newVal } : t));
+  };
 
   const filteredTrips = trips.filter((t: any) => {
     if (String(t.billNo) === "0") return false;
@@ -1655,8 +1675,9 @@ const TripsView = ({ trips, handleFilterSelect, handleDeleteTrip }: any) => {
       </div>
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
         <table className="w-full text-sm text-left">
-          <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs whitespace-nowrap">
+  <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs whitespace-nowrap">
   <tr>
+    <th className="px-4 py-3 text-center">Bill✓</th>
     <th className="px-4 py-3">Date</th>
     <th className="px-4 py-3">Bill No</th>
     <th className="px-4 py-3 border-l border-r border-slate-200 bg-slate-100">Vehicle</th>
@@ -1681,7 +1702,7 @@ const TripsView = ({ trips, handleFilterSelect, handleDeleteTrip }: any) => {
 </thead>
           <tbody className="divide-y divide-slate-100 whitespace-nowrap">
   {filteredTrips.length === 0 ? (
-    <tr><td colSpan={20} className="p-6 text-center text-slate-400">No trips recorded for this period.</td></tr>
+   <tr><td colSpan={21} className="p-6 text-center text-slate-400">No trips recorded for this period.</td></tr>
   ) : (
     filteredTrips.map((trip: any, index: number) => {
       const totalExpense =
@@ -1693,9 +1714,17 @@ const TripsView = ({ trips, handleFilterSelect, handleDeleteTrip }: any) => {
         Number(trip.expense || 0);
 
       const profit = (Number(trip.tripTotal) || 0) - totalExpense;
-      
-      return (
-        <tr key={`${trip.id}-${index}`} className="hover:bg-slate-50">
+ return (
+        <tr key={`${trip.id}-${index}`} className={`transition-colors ${!trip.billReceived ? 'bg-red-50 hover:bg-red-100 text-red-800' : 'hover:bg-slate-50'}`}>
+          <td className="px-4 py-3 text-center">
+            <button
+              onClick={() => handleToggleBillReceived(trip.id, trip.billReceived ?? false)}
+              title={trip.billReceived ? 'Mark bill as not received' : 'Mark bill as received'}
+              className={`w-5 h-5 rounded border-2 flex items-center justify-center mx-auto transition-all ${trip.billReceived ? 'bg-green-500 border-green-500 text-white' : 'border-red-400 bg-white hover:border-green-400'}`}
+            >
+              {trip.billReceived && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            </button>
+          </td>
           <td className="px-4 py-3">{trip.date}</td>
           <td className="px-4 py-3 font-mono">{trip.billNo}</td>
           <td className="px-4 py-3 font-bold border-l border-r border-slate-100 bg-slate-50/30 cursor-pointer text-blue-600 hover:underline" onClick={() => handleFilterSelect && handleFilterSelect(trip.regNumber, 'trips')}>{trip.regNumber}</td>
