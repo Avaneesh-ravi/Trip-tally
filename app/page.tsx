@@ -1384,14 +1384,20 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
         <div className="max-w-7xl mx-auto space-y-6">
             <h2 className="text-lg font-bold text-slate-700">Select Contractor</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Object.keys(CONTRACTOR_LOADS).map((contractor) => (
-                <div key={contractor} onClick={() => setSelectedContractor(contractor)} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:border-blue-400 cursor-pointer transition-all hover:shadow-md group">
-                    <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 mb-3 group-hover:bg-blue-600 group-hover:text-white transition-colors"><Building2 size={20}/></div>
-                    <h3 className="font-bold text-lg text-slate-800">{contractor}</h3>
-                    <p className="text-xs text-slate-500 mt-1">View Loads</p>
-                </div>
-            ))}
-            </div>
+{Object.keys(CONTRACTOR_LOADS).map((contractor) => {
+    const cTrips = trips.filter((t: TripRecord) => t.contractor === contractor && String(t.billNo) !== "0");
+    const cTotalRent = cTrips.reduce((sum: number, t: TripRecord) => sum + (Number(t.tripTotal) || 0), 0);
+    const cUnpaid = cTrips.filter((t: TripRecord) => !t.contractorPaidDate).length;
+    return (
+        <div key={contractor} onClick={() => setSelectedContractor(contractor)} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:border-blue-400 cursor-pointer transition-all hover:shadow-md group">
+            <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 mb-3 group-hover:bg-blue-600 group-hover:text-white transition-colors"><Building2 size={20}/></div>
+            <h3 className="font-bold text-lg text-slate-800">{contractor}</h3>
+            <p className={`text-xs mt-1 font-bold ${cUnpaid > 0 ? 'text-red-500' : 'text-slate-400'}`}>{cUnpaid} Unpaid Trips</p>
+            <p className="text-xs mt-0.5 text-emerald-700 font-bold">₹ {cTotalRent.toLocaleString('en-IN')}</p>
+        </div>
+    );
+})}
+</div>
         </div>
       );
   }
@@ -1410,14 +1416,17 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
             ) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {uniqueLoads.map((load: string) => {
-                        const count = contractorTrips.filter((t:any) => t.loadType === load).length;
-                        return (
-                            <div key={load} onClick={() => setSelectedLoadType(load)} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:border-indigo-400 cursor-pointer transition-all hover:shadow-md group">
-                                <div className="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 mb-3 group-hover:bg-indigo-600 group-hover:text-white transition-colors"><Package size={20}/></div>
-                                <h3 className="font-bold text-lg text-slate-800">{load}</h3>
-                                <p className={`text-xs mt-1 ${count > 0 ? 'text-blue-600 font-bold' : 'text-slate-400'}`}>{count} Trips Records</p>
-                            </div>
-                        );
+                        const loadTrips = contractorTrips.filter((t:any) => t.loadType === load);
+const unpaidCount = loadTrips.filter((t:any) => !t.contractorPaidDate).length;
+const totalRent = loadTrips.reduce((sum:number, t:any) => sum + (Number(t.tripTotal) || 0), 0);
+return (
+    <div key={load} onClick={() => setSelectedLoadType(load)} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:border-indigo-400 cursor-pointer transition-all hover:shadow-md group">
+        <div className="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 mb-3 group-hover:bg-indigo-600 group-hover:text-white transition-colors"><Package size={20}/></div>
+        <h3 className="font-bold text-lg text-slate-800">{load}</h3>
+        <p className={`text-xs mt-1 ${unpaidCount > 0 ? 'text-red-600 font-bold' : 'text-slate-400'}`}>{unpaidCount} Unpaid Trips</p>
+        <p className="text-xs mt-0.5 text-emerald-700 font-bold">₹ {totalRent.toLocaleString('en-IN')}</p>
+    </div>
+);
                     })}
                 </div>
             )}
