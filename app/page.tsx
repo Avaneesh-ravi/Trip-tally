@@ -1396,7 +1396,8 @@ const dbTrip = {
 const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
   const [selectedContractor, setSelectedContractor] = useState<string | null>(null);
   const [selectedLoadType, setSelectedLoadType] = useState<string | null>(null);
-
+  const [routeSearch, setRouteSearch] = useState('');           // ← ADD
+  const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   // 1. DATA PREPARATION
   // A. Get all trips for the selected contractor (EXCLUDING Bill No 0 STRICTLY)
   const contractorTrips = trips.filter((t: TripRecord) => t.contractor === selectedContractor && String(t.billNo) !== "0");
@@ -1504,29 +1505,115 @@ return (
       );
   }
 
+  // --- ROUTE FILTER STATE ---
+  
+  // Get unique routes from finalTrips
+  const uniqueRoutes = Array.from(new Set(finalTrips.map((t: TripRecord) => t.to).filter(Boolean))) as string[];
+  const filteredRouteOptions = uniqueRoutes.filter(r => r.toLowerCase().includes(routeSearch.toLowerCase()));
+
+  // Apply route filter to trips
+  const displayTrips = selectedRoute ? finalTrips.filter((t: TripRecord) => t.to === selectedRoute) : finalTrips;
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
+      {/* BREADCRUMB + PRINT */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
             <button onClick={() => setSelectedContractor(null)} className="text-sm font-bold text-slate-400 hover:text-slate-600">Contractors</button>
             <span className="text-slate-300">/</span>
             <button onClick={() => setSelectedLoadType(null)} className="text-sm font-bold text-slate-400 hover:text-slate-600">{selectedContractor}</button>
             <span className="text-slate-300">/</span>
             <span className="text-sm font-bold text-blue-600">{selectedLoadType}</span>
+            {selectedRoute && (
+              <>
+                <span className="text-slate-300">/</span>
+                <span className="text-sm font-bold text-emerald-600">{selectedRoute}</span>
+              </>
+            )}
         </div>
         <button
-          onClick={() => printSection('credited-print-area', `${selectedContractor} - ${selectedLoadType} | Payment Report`)}
-          className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md transition-all active:scale-95"
+          onClick={() => printSection('credited-print-area', `${selectedContractor} - ${selectedLoadType}${selectedRoute ? ` - ${selectedRoute}` : ''} | Payment Report`)}
+          className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md transition-all active:scale-95 w-full sm:w-auto justify-center"
         >
           <Printer size={16}/> Print PDF
         </button>
       </div>
 
+      {/* ROUTE SEARCH BAR */}
+      <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <Filter size={14} className="text-slate-400"/>
+          <span className="text-xs font-bold text-slate-600 uppercase">Filter by Route</span>
+          {selectedRoute && (
+            <button
+              onClick={() => { setSelectedRoute(null); setRouteSearch(''); }}
+              className="ml-auto flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-bold bg-red-50 px-2 py-1 rounded"
+            >
+              <X size={12}/> Clear
+            </button>
+          )}
+        </div>
+        <input
+          type="text"
+          placeholder="Search route (e.g. RGS, Perundurai...)"
+          value={routeSearch}
+          onChange={(e) => { setRouteSearch(e.target.value); setSelectedRoute(null); }}
+          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400 mb-2"
+        />
+        {routeSearch && filteredRouteOptions.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-1">
+            {filteredRouteOptions.map((route) => {
+              const rTrips = finalTrips.filter((t: TripRecord) => t.to === route);
+              const rUnpaid = rTrips.filter((t: TripRecord) => !t.contractorPaidDate).length;
+              const rTotal = rTrips.reduce((sum: number, t: TripRecord) => sum + (Number(t.tripTotal) || 0), 0);
+              return (
+                <button
+                  key={route}
+                  onClick={() => { setSelectedRoute(route); setRouteSearch(''); }}
+                  className="flex flex-col items-start bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-400 rounded-lg px-3 py-2 transition-all text-left"
+                >
+                  <span className="text-sm font-bold text-slate-800">{route}</span>
+                  <div className="flex gap-2 mt-0.5">
+                    <span className={`text-[10px] font-bold ${rUnpaid > 0 ? 'text-red-500' : 'text-slate-400'}`}>{rUnpaid} unpaid</span>
+                    <span className="text-[10px] font-bold text-emerald-600">₹{rTotal.toLocaleString('en-IN')}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {routeSearch && filteredRouteOptions.length === 0 && (
+          <p className="text-xs text-slate-400 mt-1">No routes found matching "{routeSearch}"</p>
+        )}
+        {/* Show all route chips when no search */}
+        {!routeSearch && (
+          <div className="flex flex-wrap gap-2">
+            {uniqueRoutes.map((route) => {
+              const rTrips = finalTrips.filter((t: TripRecord) => t.to === route);
+              const rUnpaid = rTrips.filter((t: TripRecord) => !t.contractorPaidDate).length;
+              return (
+                <button
+                  key={route}
+                  onClick={() => setSelectedRoute(route)}
+                  className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all ${
+                    selectedRoute === route
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-slate-100 text-slate-700 border-slate-200 hover:border-blue-400 hover:bg-blue-50'
+                  }`}
+                >
+                  {route} {rUnpaid > 0 && <span className={selectedRoute === route ? 'text-blue-200' : 'text-red-500'}>({rUnpaid})</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Unpaid Summary Stats */}
       {(() => {
-        const unpaidTrips = finalTrips.filter((t: TripRecord) => !t.contractorPaidDate);
+        const unpaidTrips = displayTrips.filter((t: TripRecord) => !t.contractorPaidDate);
         const unpaidTotal = unpaidTrips.reduce((sum: number, t: TripRecord) => sum + (Number(t.tripTotal) || 0), 0);
-        const paidTotal = finalTrips.filter((t: TripRecord) => !!t.contractorPaidDate).reduce((sum: number, t: TripRecord) => sum + (Number(t.tripTotal) || 0), 0);
+        const paidTotal = displayTrips.filter((t: TripRecord) => !!t.contractorPaidDate).reduce((sum: number, t: TripRecord) => sum + (Number(t.tripTotal) || 0), 0);
         return (
           <div id="credited-print-area">
             {/* Summary Cards - visible on screen and in print */}
@@ -1559,7 +1646,7 @@ return (
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
           <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between">
              <h3 className="font-bold text-slate-700">Trips: {selectedContractor} - {selectedLoadType}</h3>
-             <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded-full">{finalTrips.length} Records</span>
+             <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded-full">{displayTrips.length} Records{selectedRoute ? ` · ${selectedRoute}` : ''}</span>
           </div>
           <table className="w-full text-sm text-left whitespace-nowrap">
              <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs">
@@ -1578,10 +1665,10 @@ return (
                 </tr>
              </thead>
              <tbody className="divide-y divide-slate-100">
-                {finalTrips.length === 0 ? (
-                   <tr><td colSpan={11} className="p-6 text-center text-slate-400">No trips recorded for {selectedLoadType}.</td></tr>
+                {displayTrips.length === 0 ? (
+                   <tr><td colSpan={11} className="p-6 text-center text-slate-400">No trips recorded{selectedRoute ? ` for route: ${selectedRoute}` : ` for ${selectedLoadType}`}.</td></tr>
                 ) : (
-                   finalTrips.map((trip: TripRecord) => (
+                   displayTrips.map((trip: TripRecord) => (
                       <tr key={trip.id} className={`transition-all duration-500 ${trip.contractorPaidDate ? "bg-green-50/50 text-slate-400" : "bg-white"}`}>
                           <td className="px-4 py-3 text-slate-600">{trip.date}</td>
                           <td className="px-4 py-3 font-mono font-bold">{trip.billNo}</td>
