@@ -278,7 +278,7 @@ const printSection = (elementId: string, title: string) => {
               <p class="text-[10px] text-slate-500 uppercase font-bold">Trip Tally Management System • ${new Date().toLocaleDateString()}</p>
             </div>
             <div class="text-right">
-              <p class="text-lg font-black text-blue-600">TRIP TALLY</p>
+              <p class="text-lg font-black text-blue-600">ANJANEYA TRANSPORT</p>
             </div>
           </div>
           ${content}
@@ -729,7 +729,52 @@ if (tData) {
 // --- SUB-COMPONENTS (Views) ---
 
 const DashboardView = ({ vehicles, setVehicles, drivers, setDrivers, transactions, setTransactions, trips, setTrips, setCurrentView, handleFilterSelect, setHistoryLogs, currentUser }: any) => {
+  const [vehicleOrder, setVehicleOrder] = useState<number[]>([]);
+  const [draggedId, setDraggedId] = useState<number | null>(null);
+  const [dragOverId, setDragOverId] = useState<number | null>(null);
   const [activeModal, setActiveModal] = useState<{ type: string; data: any; vehicleId?: number } | null>(null);
+
+  // Load saved order from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('vehicle_order');
+    if (saved) {
+      try { setVehicleOrder(JSON.parse(saved)); } catch {}
+    }
+  }, []);
+
+  // When vehicles load, init order if not set
+  useEffect(() => {
+    if (vehicles.length > 0 && vehicleOrder.length === 0) {
+      setVehicleOrder(vehicles.map((v: Vehicle) => v.id));
+    }
+  }, [vehicles]);
+
+  const orderedVehicles = vehicleOrder.length > 0
+    ? [...vehicles].sort((a: Vehicle, b: Vehicle) => {
+        const ai = vehicleOrder.indexOf(a.id);
+        const bi = vehicleOrder.indexOf(b.id);
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      })
+    : vehicles;
+
+  const handleDragStart = (id: number) => setDraggedId(id);
+  const handleDragOver = (e: React.DragEvent, id: number) => { e.preventDefault(); setDragOverId(id); };
+  const handleDrop = (targetId: number) => {
+    if (draggedId === null || draggedId === targetId) { setDraggedId(null); setDragOverId(null); return; }
+    const newOrder = [...vehicleOrder];
+    const fromIdx = newOrder.indexOf(draggedId);
+    const toIdx = newOrder.indexOf(targetId);
+    if (fromIdx === -1 || toIdx === -1) { setDraggedId(null); setDragOverId(null); return; }
+    newOrder.splice(fromIdx, 1);
+    newOrder.splice(toIdx, 0, draggedId);
+    setVehicleOrder(newOrder);
+    localStorage.setItem('vehicle_order', JSON.stringify(newOrder));
+    setDraggedId(null);
+    setDragOverId(null);
+  };
+  const handleDragEnd = () => { setDraggedId(null); setDragOverId(null); };
   const [selectedDriverForModal, setSelectedDriverForModal] = useState<Driver | null>(null);
   const [showDriverList, setShowDriverList] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -1082,9 +1127,32 @@ const dbTrip = {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex justify-between items-center"><h2 className="text-lg font-bold">Fleet Status</h2><button onClick={() => setIsAdding(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-md hover:bg-blue-700"><Plus size={16}/> Add Lorry</button></div>
-      <div className="space-y-4">{vehicles.map((vehicle: Vehicle) => (<VehicleCard key={vehicle.id} data={vehicle} onAction={(type) => openActionModal(type, vehicle)} onFilter={handleFilterSelect} />))}</div>
+      <div className="space-y-4">
+        {orderedVehicles.map((vehicle: Vehicle) => (
+          <div
+            key={vehicle.id}
+            draggable
+            onDragStart={() => handleDragStart(vehicle.id)}
+            onDragOver={(e) => handleDragOver(e, vehicle.id)}
+            onDrop={() => handleDrop(vehicle.id)}
+            onDragEnd={handleDragEnd}
+            className={`transition-all duration-200 rounded-2xl ${
+              draggedId === vehicle.id ? 'opacity-40 scale-95' : 'opacity-100'
+            } ${
+              dragOverId === vehicle.id && draggedId !== vehicle.id
+                ? 'ring-2 ring-blue-400 ring-offset-2' : ''
+            }`}
+          >
+            <VehicleCard
+              data={vehicle}
+              onAction={(type) => openActionModal(type, vehicle)}
+              onFilter={handleFilterSelect}
+            />
+          </div>
+        ))}
+      </div>
       
-      {activeModal?.type === 'details' && <DetailsModal data={activeModal.data} onClose={() => setActiveModal(null)} />}
+      {activeModal?.type === 'details' && <DetailsModal data={activeModal.data} onClose={() => setActiveModal(null)} setVehicles={setVehicles} />}
       
       {showDriverList && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
@@ -1460,34 +1528,35 @@ return (
         const unpaidTotal = unpaidTrips.reduce((sum: number, t: TripRecord) => sum + (Number(t.tripTotal) || 0), 0);
         const paidTotal = finalTrips.filter((t: TripRecord) => !!t.contractorPaidDate).reduce((sum: number, t: TripRecord) => sum + (Number(t.tripTotal) || 0), 0);
         return (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex md:flex-col items-center md:items-start justify-between md:justify-start gap-2">
-              <div className="text-red-600 font-bold text-xs uppercase">Unpaid Total</div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-sm font-bold text-red-400">₹</span>
-                <span className="text-xl font-bold text-slate-800">{unpaidTotal.toLocaleString('en-IN')}</span>
+          <div id="credited-print-area">
+            {/* Summary Cards - visible on screen and in print */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+              <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex md:flex-col items-center md:items-start justify-between md:justify-start gap-2">
+                <div className="text-red-600 font-bold text-xs uppercase">Unpaid Total</div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-sm font-bold text-red-400">₹</span>
+                  <span className="text-xl font-bold text-slate-800">{unpaidTotal.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="text-xs text-red-400 md:mt-1">{unpaidTrips.length} trips pending</div>
               </div>
-              <div className="text-xs text-red-400 md:mt-1">{unpaidTrips.length} trips pending</div>
-            </div>
-            <div className="bg-green-50 border border-green-100 p-4 rounded-xl flex md:flex-col items-center md:items-start justify-between md:justify-start gap-2">
-              <div className="text-green-600 font-bold text-xs uppercase">Paid Total</div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-sm font-bold text-green-400">₹</span>
-                <span className="text-xl font-bold text-slate-800">{paidTotal.toLocaleString('en-IN')}</span>
+              <div className="bg-green-50 border border-green-100 p-4 rounded-xl flex md:flex-col items-center md:items-start justify-between md:justify-start gap-2">
+                <div className="text-green-600 font-bold text-xs uppercase">Paid Total</div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-sm font-bold text-green-400">₹</span>
+                  <span className="text-xl font-bold text-slate-800">{paidTotal.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+              <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex md:flex-col items-center md:items-start justify-between md:justify-start gap-2">
+                <div className="text-blue-600 font-bold text-xs uppercase">Grand Total</div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-sm font-bold text-blue-400">₹</span>
+                  <span className="text-xl font-bold text-slate-800">{(unpaidTotal + paidTotal).toLocaleString('en-IN')}</span>
+                </div>
               </div>
             </div>
-            <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex md:flex-col items-center md:items-start justify-between md:justify-start gap-2">
-              <div className="text-blue-600 font-bold text-xs uppercase">Grand Total</div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-sm font-bold text-blue-400">₹</span>
-                <span className="text-xl font-bold text-slate-800">{(unpaidTotal + paidTotal).toLocaleString('en-IN')}</span>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
-      <div id="credited-print-area" className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+            {/* Table */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
           <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between">
              <h3 className="font-bold text-slate-700">Trips: {selectedContractor} - {selectedLoadType}</h3>
              <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded-full">{finalTrips.length} Records</span>
@@ -1544,6 +1613,9 @@ return (
              </tbody>
           </table>
         </div>
+      </div>
+        );
+      })()}
     </div>
   );
 };
