@@ -1460,19 +1460,28 @@ return (
         const unpaidTotal = unpaidTrips.reduce((sum: number, t: TripRecord) => sum + (Number(t.tripTotal) || 0), 0);
         const paidTotal = finalTrips.filter((t: TripRecord) => !!t.contractorPaidDate).reduce((sum: number, t: TripRecord) => sum + (Number(t.tripTotal) || 0), 0);
         return (
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-red-50 border border-red-100 p-4 rounded-xl">
-              <div className="text-red-600 font-bold text-xs uppercase mb-1">Unpaid Total</div>
-              <div className="text-2xl font-bold text-slate-800">₹ {unpaidTotal.toLocaleString('en-IN')}</div>
-              <div className="text-xs text-red-400 mt-1">{unpaidTrips.length} trips pending</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex md:flex-col items-center md:items-start justify-between md:justify-start gap-2">
+              <div className="text-red-600 font-bold text-xs uppercase">Unpaid Total</div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-sm font-bold text-red-400">₹</span>
+                <span className="text-xl font-bold text-slate-800">{unpaidTotal.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="text-xs text-red-400 md:mt-1">{unpaidTrips.length} trips pending</div>
             </div>
-            <div className="bg-green-50 border border-green-100 p-4 rounded-xl">
-              <div className="text-green-600 font-bold text-xs uppercase mb-1">Paid Total</div>
-              <div className="text-2xl font-bold text-slate-800">₹ {paidTotal.toLocaleString('en-IN')}</div>
+            <div className="bg-green-50 border border-green-100 p-4 rounded-xl flex md:flex-col items-center md:items-start justify-between md:justify-start gap-2">
+              <div className="text-green-600 font-bold text-xs uppercase">Paid Total</div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-sm font-bold text-green-400">₹</span>
+                <span className="text-xl font-bold text-slate-800">{paidTotal.toLocaleString('en-IN')}</span>
+              </div>
             </div>
-            <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl">
-              <div className="text-blue-600 font-bold text-xs uppercase mb-1">Grand Total</div>
-              <div className="text-2xl font-bold text-slate-800">₹ {(unpaidTotal + paidTotal).toLocaleString('en-IN')}</div>
+            <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex md:flex-col items-center md:items-start justify-between md:justify-start gap-2">
+              <div className="text-blue-600 font-bold text-xs uppercase">Grand Total</div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-sm font-bold text-blue-400">₹</span>
+                <span className="text-xl font-bold text-slate-800">{(unpaidTotal + paidTotal).toLocaleString('en-IN')}</span>
+              </div>
             </div>
           </div>
         );
