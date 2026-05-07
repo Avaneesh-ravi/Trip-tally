@@ -228,73 +228,59 @@ interface Notification {
 // --- HELPERS ---
 
 const printSection = (elementId: string, title: string) => {
-  const content = document.getElementById(elementId)?.innerHTML;
-  if (!content) return;
+  const element = document.getElementById(elementId);
+  if (!element) return;
 
-  const printWindow = window.open('', '', 'width=1200,height=800');
-  if (printWindow) {
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>${title}</title>
-          <script src="https://cdn.tailwindcss.com"></script>
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-            
-            @media print {
-              @page { size: landscape; margin: 8mm; }
-              body { 
-                font-family: 'Inter', sans-serif;
-                background: white !important; 
-                padding: 0; 
-                margin: 0; 
-                -webkit-print-color-adjust: exact !important; 
-                print-color-adjust: exact !important; 
-              }
-              .no-print { display: none !important; }
-              
-              /* Ensure the grid of summary cards prints side-by-side */
-              .grid { display: grid !important; grid-template-columns: repeat(5, 1fr) !important; gap: 10px !important; margin-bottom: 20px !important; }
-              
-              /* Table styling for high density data */
-              table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
-              th, td { border: 1px solid #e2e8f0 !important; padding: 4px 6px !important; font-size: 9px !important; line-height: 1.2 !important; }
-              th { background-color: #1e293b !important; color: white !important; -webkit-print-color-adjust: exact; }
-              
-              /* Force specific background colors to show */
-              .bg-blue-900 { background-color: #1e3a8a !important; color: white !important; }
-              .bg-slate-800 { background-color: #1e293b !important; color: white !important; }
-              .bg-slate-700 { background-color: #334155 !important; color: white !important; }
-              .text-green-600 { color: #16a34a !important; font-weight: bold !important; }
-              .text-red-600 { color: #dc2626 !important; font-weight: bold !important; }
-              .bg-blue-50 { background-color: #eff6ff !important; }
-            }
-          </style>
-        </head>
-        <body class="p-4">
-          <div class="flex justify-between items-center mb-4 border-b-2 border-slate-200 pb-4">
-            <div>
-              <h1 class="text-xl font-extrabold text-slate-800">${title}</h1>
-              <p class="text-[10px] text-slate-500 uppercase font-bold">Trip Tally Management System • ${new Date().toLocaleDateString()}</p>
-            </div>
-            <div class="text-right">
-              <p class="text-lg font-black text-blue-600">ANJANEYA TRANSPORT</p>
-            </div>
-          </div>
-          ${content}
-          <div class="mt-4 pt-4 border-t border-slate-100 text-center">
-            <p class="text-[8px] text-slate-400 italic">This is a computer generated statement. For any discrepancies, please contact the depot office.</p>
-          </div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    // 1 second delay allows Tailwind to finish processing before the print dialog opens
-    setTimeout(() => { 
-      printWindow.print(); 
-      printWindow.close(); 
-    }, 1000);
+  // Inject a temporary <style> tag for print-only styling
+  const styleId = 'trip-tally-print-style';
+  let styleEl = document.getElementById(styleId) as HTMLStyleElement | null;
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = styleId;
+    document.head.appendChild(styleEl);
   }
+  styleEl.textContent = `
+    @media print {
+      @page { size: landscape; margin: 8mm; }
+      body > * { display: none !important; }
+      #print-overlay { display: block !important; }
+    }
+  `;
+
+  // Create an overlay div that covers the page for printing
+  const existingOverlay = document.getElementById('print-overlay');
+  if (existingOverlay) existingOverlay.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'print-overlay';
+  overlay.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; background:white; z-index:99999; padding:16px; font-family:sans-serif; font-size:11px;';
+
+  overlay.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:2px solid #e2e8f0; padding-bottom:8px;">
+      <div>
+        <h1 style="font-size:18px; font-weight:800; color:#1e293b; margin:0;">${title}</h1>
+        <p style="font-size:9px; color:#94a3b8; margin:2px 0 0; font-weight:700; text-transform:uppercase;">Trip Tally • ${new Date().toLocaleDateString()}</p>
+      </div>
+      <p style="font-size:15px; font-weight:900; color:#2563eb; margin:0;">ANJANEYA TRANSPORT</p>
+    </div>
+    ${element.innerHTML}
+    <div style="margin-top:12px; padding-top:8px; border-top:1px solid #f1f5f9; text-align:center;">
+      <p style="font-size:8px; color:#cbd5e1; font-style:italic;">Computer generated statement. Contact depot for discrepancies.</p>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Hide no-print elements inside overlay
+  overlay.querySelectorAll('.no-print').forEach((el: any) => el.style.display = 'none');
+
+  window.print();
+
+  // Cleanup after print dialog closes
+  setTimeout(() => {
+    overlay.remove();
+    if (styleEl) styleEl.textContent = '';
+  }, 1000);
 };
 
 const DateFilter = ({ startDate, endDate, onStartChange, onEndChange }: any) => (
@@ -1169,28 +1155,22 @@ const dbTrip = {
         <ModalWrapper 
           title={editingTripId ? "Edit Trip Details" : "Update Trip Details"} 
           onClose={() => setActiveModal(null)}
-          headerContent={
-            !editingTripId && (
-              <button type="button" onClick={() => setShowEditSearch(!showEditSearch)} className="flex items-center gap-1 text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1.5 rounded hover:bg-blue-100 transition-colors">
-                <Palette size={14} className="text-blue-600"/> Edit Previous
-              </button>
-            )
-          }
+          headerContent={...}
         >
-          {showEditSearch && (
-             <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg animate-in slide-in-from-top-2">
-                <h4 className="text-xs font-bold text-yellow-800 uppercase mb-2">Search Trip to Edit</h4>
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                   <input type="text" placeholder="Bill No" className="p-2 border rounded text-xs" value={editSearchForm.billNo} onChange={(e) => setEditSearchForm({...editSearchForm, billNo: e.target.value})}/>
-                   <input type="date" className="p-2 border rounded text-xs" value={editSearchForm.date} onChange={(e) => setEditSearchForm({...editSearchForm, date: e.target.value})}/>
-                </div>
-                <button onClick={handleEditSearch} className="w-full bg-yellow-600 text-white text-xs font-bold py-2 rounded hover:bg-yellow-700">Find & Edit Trip</button>
-             </div>
+          {/* Selected Vehicle Banner */}
+          {activeModal?.data?.regNumber && (
+            <div className="mb-3 flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm">
+              <Truck size={16} className="shrink-0"/>
+              <span className="text-xs font-bold uppercase tracking-wide">Vehicle:</span>
+              <span className="text-base font-extrabold tracking-widest">{activeModal.data.regNumber}</span>
+            </div>
           )}
+
+          {showEditSearch && (...)}
           <form onSubmit={handleSaveTrip} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
               <div className="grid grid-cols-2 gap-3">
-               <Input label="Trip Date *" type="date" value={tripForm.date} onChange={(e) => handleInputChange('date', e.target.value)} required error={errors.includes('date')} />
-               <Input label="Bill Number *" value={tripForm.billNo} onChange={(e) => handleInputChange('billNo', e.target.value)} required error={errors.includes('billNo')} />
+               <Input label="Trip Date *" type="date" .../>
+               <Input label="Bill Number *" .../>
               </div>
               
               <div className="grid grid-cols-2 gap-3">
@@ -1396,8 +1376,30 @@ const dbTrip = {
 const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
   const [selectedContractor, setSelectedContractor] = useState<string | null>(null);
   const [selectedLoadType, setSelectedLoadType] = useState<string | null>(null);
-  const [routeSearch, setRouteSearch] = useState('');           // ← ADD
+  const [routeSearch, setRouteSearch] = useState('');
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
+  const [selectedPrintIds, setSelectedPrintIds] = useState<Set<number>>(new Set());
+
+  const togglePrintSelect = (id: number) => {
+    setSelectedPrintIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handlePrintSelected = (title: string) => {
+    // Build a temporary element with only selected rows
+    const allRows = document.querySelectorAll('[data-trip-row]');
+    allRows.forEach((row: any) => {
+      const id = Number(row.getAttribute('data-trip-row'));
+      row.style.display = (selectedPrintIds.size === 0 || selectedPrintIds.has(id)) ? '' : 'none';
+    });
+    printSection('credited-print-area', title);
+    setTimeout(() => {
+      allRows.forEach((row: any) => { row.style.display = ''; });
+    }, 1200);
+  };
   // 1. DATA PREPARATION
   // A. Get all trips for the selected contractor (EXCLUDING Bill No 0 STRICTLY)
   const contractorTrips = trips.filter((t: TripRecord) => t.contractor === selectedContractor && String(t.billNo) !== "0");
@@ -1455,14 +1457,15 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 {Object.keys(CONTRACTOR_LOADS).map((contractor) => {
     const cTrips = trips.filter((t: TripRecord) => t.contractor === contractor && String(t.billNo) !== "0");
-    const cTotalRent = cTrips.reduce((sum: number, t: TripRecord) => sum + (Number(t.tripTotal) || 0), 0);
-    const cUnpaid = cTrips.filter((t: TripRecord) => !t.contractorPaidDate).length;
+    const cUnpaidTrips = cTrips.filter((t: TripRecord) => !t.contractorPaidDate);
+    const cUnpaid = cUnpaidTrips.length;
+    const cUnpaidAmount = cUnpaidTrips.reduce((sum: number, t: TripRecord) => sum + (Number(t.tripTotal) || 0), 0);
     return (
         <div key={contractor} onClick={() => setSelectedContractor(contractor)} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:border-blue-400 cursor-pointer transition-all hover:shadow-md group">
             <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 mb-3 group-hover:bg-blue-600 group-hover:text-white transition-colors"><Building2 size={20}/></div>
             <h3 className="font-bold text-lg text-slate-800">{contractor}</h3>
             <p className={`text-xs mt-1 font-bold ${cUnpaid > 0 ? 'text-red-500' : 'text-slate-400'}`}>{cUnpaid} Unpaid Trips</p>
-            <p className="text-xs mt-0.5 text-emerald-700 font-bold">₹ {cTotalRent.toLocaleString('en-IN')}</p>
+            <p className={`text-xs mt-0.5 font-bold ${cUnpaid > 0 ? 'text-red-600' : 'text-emerald-700'}`}>₹ {cUnpaidAmount.toLocaleString('en-IN')}</p>
         </div>
     );
 })}
@@ -1531,12 +1534,19 @@ return (
               </>
             )}
         </div>
-        <button
-          onClick={() => printSection('credited-print-area', `${selectedContractor} - ${selectedLoadType}${selectedRoute ? ` - ${selectedRoute}` : ''} | Payment Report`)}
-          className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md transition-all active:scale-95 w-full sm:w-auto justify-center"
-        >
-          <Printer size={16}/> Print PDF
-        </button>
+        <div className="flex items-center gap-2">
+          {selectedPrintIds.size > 0 && (
+            <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200">
+              {selectedPrintIds.size} selected
+            </span>
+          )}
+          <button
+            onClick={() => handlePrintSelected(`${selectedContractor} - ${selectedLoadType}${selectedRoute ? ` - ${selectedRoute}` : ''} | Payment Report`)}
+            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md transition-all active:scale-95 w-full sm:w-auto justify-center"
+          >
+            <Printer size={16}/> {selectedPrintIds.size > 0 ? `Print ${selectedPrintIds.size} Selected` : 'Print All'}
+          </button>
+        </div>
       </div>
 
       {/* ROUTE SEARCH BAR */}
@@ -1651,6 +1661,15 @@ return (
           <table className="w-full text-sm text-left whitespace-nowrap">
              <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs">
                 <tr>
+                   <th className="px-4 py-3 text-center">
+                     <input type="checkbox" className="rounded" 
+                       checked={selectedPrintIds.size === displayTrips.length && displayTrips.length > 0}
+                       onChange={() => {
+                         if (selectedPrintIds.size === displayTrips.length) setSelectedPrintIds(new Set());
+                         else setSelectedPrintIds(new Set(displayTrips.map((t: TripRecord) => t.id)));
+                       }}
+                     />
+                   </th>
                    <th className="px-4 py-3">Trip Date</th>
                    <th className="px-4 py-3">Bill No</th>
                    <th className="px-4 py-3">Vehicle</th>
@@ -1666,10 +1685,13 @@ return (
              </thead>
              <tbody className="divide-y divide-slate-100">
                 {displayTrips.length === 0 ? (
-                   <tr><td colSpan={11} className="p-6 text-center text-slate-400">No trips recorded{selectedRoute ? ` for route: ${selectedRoute}` : ` for ${selectedLoadType}`}.</td></tr>
+                   <tr><td colSpan={12} className="p-6 text-center text-slate-400">No trips recorded{selectedRoute ? ` for route: ${selectedRoute}` : ` for ${selectedLoadType}`}.</td></tr>
                 ) : (
                    displayTrips.map((trip: TripRecord) => (
-                      <tr key={trip.id} className={`transition-all duration-500 ${trip.contractorPaidDate ? "bg-green-50/50 text-slate-400" : "bg-white"}`}>
+                      <tr key={trip.id} data-trip-row={trip.id} className={`transition-all duration-500 ${trip.contractorPaidDate ? "bg-green-50/50 text-slate-400" : "bg-white"}`}>
+                          <td className="px-4 py-3 text-center no-print">
+                            <input type="checkbox" className="rounded" checked={selectedPrintIds.has(trip.id)} onChange={() => togglePrintSelect(trip.id)} />
+                          </td>
                           <td className="px-4 py-3 text-slate-600">{trip.date}</td>
                           <td className="px-4 py-3 font-mono font-bold">{trip.billNo}</td>
                           <td className="px-4 py-3 text-blue-600 font-bold">{trip.regNumber}</td>
@@ -1741,7 +1763,11 @@ const FuelView = ({ trips, filterReg, setFilterReg, setTrips }: any) => {
     if (error) {
       alert("Update failed: " + error.message);
     } else {
-      setTrips((prev: any) => prev.map((t: any) => t.id === editingTrip.id ? { ...t, ...editingTrip } : t));
+      setTrips((prev: any) => prev.map((t: any) => 
+        t.id === editingTrip.id 
+          ? { ...t, dieselLiters: editingTrip.dieselLiters, dieselPrice: editingTrip.dieselPrice } 
+          : t
+      ));
       setEditingTrip(null);
       alert("Fuel record updated!");
     }
@@ -2212,10 +2238,17 @@ const DriversView = ({ drivers, setDrivers, trips, setTrips, currentUser }: any)
 const FinanceView = ({ transactions, drivers, trips, handleDeleteTrip }: any) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState(''); // e.g. "2025-06"
 
-  // 1. FILTERING
+  // Build list of months from trips data
+  const availableMonths = Array.from(
+    new Set(trips.filter((t: any) => String(t.billNo) !== "0" && t.date).map((t: any) => t.date.slice(0, 7)))
+  ).sort((a: any, b: any) => b.localeCompare(a)) as string[];
+
+  // 1. FILTERING — month dropdown takes priority over date range
   const filteredTrips = trips.filter((t: any) => {
     if (String(t.billNo) === "0") return false;
+    if (selectedMonth) return t.date && t.date.startsWith(selectedMonth);
     if (!startDate && !endDate) return true;
     const tripDate = new Date(t.date);
     const start = startDate ? new Date(startDate) : new Date('1900-01-01');
@@ -2288,7 +2321,27 @@ const totalExpenses = Math.round(
              <p className="text-xs text-slate-500 font-medium">Track Earnings, Expenses & Downloads</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-            <DateFilter startDate={startDate} endDate={endDate} onStartChange={setStartDate} onEndChange={setEndDate} />
+            {/* Month Dropdown */}
+            <div className="flex items-center gap-2 bg-white border border-slate-200 p-1.5 rounded-lg shadow-sm">
+              <Calendar size={14} className="text-slate-400"/>
+              <select
+                className="text-xs border-none outline-none text-slate-700 font-medium bg-transparent"
+                value={selectedMonth}
+                onChange={(e) => { setSelectedMonth(e.target.value); setStartDate(''); setEndDate(''); }}
+              >
+                <option value="">All Months</option>
+                {availableMonths.map((m: string) => {
+                  const [year, month] = m.split('-');
+                  const label = new Date(Number(year), Number(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+                  return <option key={m} value={m}>{label}</option>;
+                })}
+              </select>
+              {selectedMonth && (
+                <button onClick={() => setSelectedMonth('')} className="ml-1 p-1 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded"><X size={12}/></button>
+              )}
+            </div>
+            {/* Optional date range (secondary) */}
+            {!selectedMonth && <DateFilter startDate={startDate} endDate={endDate} onStartChange={setStartDate} onEndChange={setEndDate} />}
             <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>
             <button onClick={handleDownloadExcel} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md transition-all active:scale-95"><Download size={16}/> Excel</button>
             <button onClick={() => printSection('finance-print-area', 'Financial Report')} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md transition-all active:scale-95"><Printer size={16}/> Print</button>
