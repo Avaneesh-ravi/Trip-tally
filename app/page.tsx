@@ -3282,9 +3282,9 @@ const calculatedNetAdded = Math.round(localWalletBalance + selectedTripsSum);
 </thead>
             <tbody className="divide-y divide-slate-100 text-[11px] font-medium">
     {loading ? (
-        <tr><td colSpan={11} className="p-8 text-center text-slate-400">Loading History...</td></tr>
+        <tr><td colSpan={12} className="p-8 text-center text-slate-400">Loading History...</td></tr>
     ) : filteredHistory.length === 0 ? (
-        <tr><td colSpan={11} className="p-8 text-center text-slate-400">No active trips found.</td></tr>
+        <tr><td colSpan={12} className="p-8 text-center text-slate-400">No active trips found.</td></tr>
     ) : filteredHistory.map((h, index) => {
         const isSelected = selectedTripIds.has(h.id);
         const netAddedValue = h.netAmount; 
