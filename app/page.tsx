@@ -1404,15 +1404,47 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
   };
 
   const handlePrintSelected = (title: string) => {
-    // Build a temporary element with only selected rows
+    // Determine which trips are "active" for this print
+    const activeTrips: TripRecord[] = selectedPrintIds.size === 0
+      ? displayTrips
+      : displayTrips.filter((t: TripRecord) => selectedPrintIds.has(t.id));
+
+    // Compute totals for selected trips only
+    const selUnpaidTrips = activeTrips.filter((t: TripRecord) => !t.contractorPaidDate);
+    const selUnpaidTotal = selUnpaidTrips.reduce((s: number, t: TripRecord) => s + (Number(t.tripTotal) || 0), 0);
+    const selPaidTotal = activeTrips.filter((t: TripRecord) => !!t.contractorPaidDate).reduce((s: number, t: TripRecord) => s + (Number(t.tripTotal) || 0), 0);
+    const selGrandTotal = selUnpaidTotal + selPaidTotal;
+
+    // Update summary card DOM elements before printing
+    const unpaidEl = document.getElementById('print-unpaid-total');
+    const paidEl = document.getElementById('print-paid-total');
+    const grandEl = document.getElementById('print-grand-total');
+    const pendingEl = document.getElementById('print-pending-count');
+    const origUnpaid = unpaidEl?.textContent ?? '';
+    const origPaid = paidEl?.textContent ?? '';
+    const origGrand = grandEl?.textContent ?? '';
+    const origPending = pendingEl?.textContent ?? '';
+    if (unpaidEl) unpaidEl.textContent = selUnpaidTotal.toLocaleString('en-IN');
+    if (paidEl) paidEl.textContent = selPaidTotal.toLocaleString('en-IN');
+    if (grandEl) grandEl.textContent = selGrandTotal.toLocaleString('en-IN');
+    if (pendingEl) pendingEl.textContent = `${selUnpaidTrips.length} trips pending`;
+
+    // Hide non-selected rows
     const allRows = document.querySelectorAll('[data-trip-row]');
     allRows.forEach((row: any) => {
       const id = Number(row.getAttribute('data-trip-row'));
       row.style.display = (selectedPrintIds.size === 0 || selectedPrintIds.has(id)) ? '' : 'none';
     });
+
     printSection('credited-print-area', title);
+
+    // Restore everything after print
     setTimeout(() => {
       allRows.forEach((row: any) => { row.style.display = ''; });
+      if (unpaidEl) unpaidEl.textContent = origUnpaid;
+      if (paidEl) paidEl.textContent = origPaid;
+      if (grandEl) grandEl.textContent = origGrand;
+      if (pendingEl) pendingEl.textContent = origPending;
     }, 1200);
   };
   // 1. DATA PREPARATION
@@ -1647,22 +1679,22 @@ return (
                 <div className="text-red-600 font-bold text-xs uppercase">Unpaid Total</div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-sm font-bold text-red-400">₹</span>
-                  <span className="text-xl font-bold text-slate-800">{unpaidTotal.toLocaleString('en-IN')}</span>
+                  <span id="print-unpaid-total" className="text-xl font-bold text-slate-800">{unpaidTotal.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="text-xs text-red-400 md:mt-1">{unpaidTrips.length} trips pending</div>
+                <div id="print-pending-count" className="text-xs text-red-400 md:mt-1">{unpaidTrips.length} trips pending</div>
               </div>
               <div className="bg-green-50 border border-green-100 p-4 rounded-xl flex md:flex-col items-center md:items-start justify-between md:justify-start gap-2">
                 <div className="text-green-600 font-bold text-xs uppercase">Paid Total</div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-sm font-bold text-green-400">₹</span>
-                  <span className="text-xl font-bold text-slate-800">{paidTotal.toLocaleString('en-IN')}</span>
+                  <span id="print-paid-total" className="text-xl font-bold text-slate-800">{paidTotal.toLocaleString('en-IN')}</span>
                 </div>
               </div>
               <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex md:flex-col items-center md:items-start justify-between md:justify-start gap-2">
                 <div className="text-blue-600 font-bold text-xs uppercase">Grand Total</div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-sm font-bold text-blue-400">₹</span>
-                  <span className="text-xl font-bold text-slate-800">{(unpaidTotal + paidTotal).toLocaleString('en-IN')}</span>
+                  <span id="print-grand-total" className="text-xl font-bold text-slate-800">{(unpaidTotal + paidTotal).toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>
@@ -1901,6 +1933,12 @@ const FuelView = ({ trips, filterReg, setFilterReg, setTrips }: any) => {
 const TripsView = ({ trips, setTrips, handleFilterSelect, handleDeleteTrip }: any) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('');
+
+  // Build list of months from trips data
+  const availableMonths = Array.from(
+    new Set(trips.filter((t: any) => String(t.billNo) !== "0" && t.date).map((t: any) => t.date.slice(0, 7)))
+  ).sort((a: any, b: any) => b.localeCompare(a)) as string[];
 
   const handleToggleBillReceived = async (tripId: number, current: boolean) => {
     const newVal = !current;
@@ -1910,6 +1948,7 @@ const TripsView = ({ trips, setTrips, handleFilterSelect, handleDeleteTrip }: an
 
   const filteredTrips = trips.filter((t: any) => {
     if (String(t.billNo) === "0") return false;
+    if (selectedMonth) return t.date && t.date.startsWith(selectedMonth);
     if (!startDate && !endDate) return true;
     const tripDate = new Date(t.date);
     const start = startDate ? new Date(startDate) : new Date('1900-01-01');
@@ -1919,9 +1958,31 @@ const TripsView = ({ trips, setTrips, handleFilterSelect, handleDeleteTrip }: an
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h2 className="text-lg font-bold">Trip History & Earnings</h2>
-        <DateFilter startDate={startDate} endDate={endDate} onStartChange={setStartDate} onEndChange={setEndDate} />
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Month Dropdown */}
+          <div className="flex items-center gap-2 bg-white border border-slate-200 p-1.5 rounded-lg shadow-sm">
+            <Calendar size={14} className="text-slate-400"/>
+            <select
+              className="text-xs border-none outline-none text-slate-700 font-medium bg-transparent"
+              value={selectedMonth}
+              onChange={(e) => { setSelectedMonth(e.target.value); setStartDate(''); setEndDate(''); }}
+            >
+              <option value="">All Months</option>
+              {availableMonths.map((m: string) => {
+                const [year, month] = m.split('-');
+                const label = new Date(Number(year), Number(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+                return <option key={m} value={m}>{label}</option>;
+              })}
+            </select>
+            {selectedMonth && (
+              <button onClick={() => setSelectedMonth('')} className="ml-1 p-1 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded"><X size={12}/></button>
+            )}
+          </div>
+          {/* Date range (secondary, hidden when month selected) */}
+          {!selectedMonth && <DateFilter startDate={startDate} endDate={endDate} onStartChange={setStartDate} onEndChange={setEndDate} />}
+        </div>
       </div>
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
         <table className="w-full text-sm text-left">
