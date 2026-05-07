@@ -18,8 +18,8 @@ const CONTRACTOR_LOADS: Record<string, string[]> = {
   "Null":["Null"],
   "KSP": ["Maize", "Rape Seed", "Soya", "Fertilizer"],
   "TKS": ["Fertilizer"],
-  "SBT": ["Rice", "Wheat", "Fertilizer", "Maize", "Sugar", "SOYA"],
-  "MP SAMY": ["Rape Seed"],
+  "SBT": ["Rice", "Wheat", "Fertilizer", "Maize", "Sugar", "SOYA","Cement"],
+  "MP SAMY": ["Rape Seed","Wheat"],
   "SS":["Maize"],
   "KGS":["Sugar"],
 };
