@@ -1155,7 +1155,13 @@ const dbTrip = {
         <ModalWrapper 
           title={editingTripId ? "Edit Trip Details" : "Update Trip Details"} 
           onClose={() => setActiveModal(null)}
-          headerContent={...}
+          headerContent={
+            !editingTripId && (
+              <button type="button" onClick={() => setShowEditSearch(!showEditSearch)} className="flex items-center gap-1 text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1.5 rounded hover:bg-blue-100 transition-colors">
+                <Palette size={14} className="text-blue-600"/> Edit Previous
+              </button>
+            )
+          }
         >
           {/* Selected Vehicle Banner */}
           {activeModal?.data?.regNumber && (
@@ -1166,11 +1172,20 @@ const dbTrip = {
             </div>
           )}
 
-          {showEditSearch && (...)}
+          {showEditSearch && (
+             <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg animate-in slide-in-from-top-2">
+                <h4 className="text-xs font-bold text-yellow-800 uppercase mb-2">Search Trip to Edit</h4>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                   <input type="text" placeholder="Bill No" className="p-2 border rounded text-xs" value={editSearchForm.billNo} onChange={(e) => setEditSearchForm({...editSearchForm, billNo: e.target.value})}/>
+                   <input type="date" className="p-2 border rounded text-xs" value={editSearchForm.date} onChange={(e) => setEditSearchForm({...editSearchForm, date: e.target.value})}/>
+                </div>
+                <button onClick={handleEditSearch} className="w-full bg-yellow-600 text-white text-xs font-bold py-2 rounded hover:bg-yellow-700">Find & Edit Trip</button>
+             </div>
+          )}
           <form onSubmit={handleSaveTrip} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
               <div className="grid grid-cols-2 gap-3">
-               <Input label="Trip Date *" type="date" .../>
-               <Input label="Bill Number *" .../>
+               <Input label="Trip Date *" type="date" value={tripForm.date} onChange={(e) => handleInputChange('date', e.target.value)} required error={errors.includes('date')} />
+               <Input label="Bill Number *" value={tripForm.billNo} onChange={(e) => handleInputChange('billNo', e.target.value)} required error={errors.includes('billNo')} />
               </div>
               
               <div className="grid grid-cols-2 gap-3">
