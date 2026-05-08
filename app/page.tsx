@@ -1425,16 +1425,109 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
   };
 
   const handlePrintSelected = (title: string) => {
-    // Build a temporary element with only selected rows
-    const allRows = document.querySelectorAll('[data-trip-row]');
-    allRows.forEach((row: any) => {
-      const id = Number(row.getAttribute('data-trip-row'));
-      row.style.display = (selectedPrintIds.size === 0 || selectedPrintIds.has(id)) ? '' : 'none';
-    });
-    printSection('credited-print-area', title);
-    setTimeout(() => {
-      allRows.forEach((row: any) => { row.style.display = ''; });
-    }, 1200);
+    // Filter which trips to include
+    const tripsToPrint = selectedPrintIds.size > 0
+      ? displayTrips.filter((t: TripRecord) => selectedPrintIds.has(t.id))
+      : displayTrips;
+
+    const unpaidTotal = tripsToPrint
+      .filter((t: TripRecord) => !t.contractorPaidDate)
+      .reduce((s: number, t: TripRecord) => s + (Number(t.tripTotal) || 0), 0);
+    const paidTotal = tripsToPrint
+      .filter((t: TripRecord) => !!t.contractorPaidDate)
+      .reduce((s: number, t: TripRecord) => s + (Number(t.tripTotal) || 0), 0);
+
+    const rows = tripsToPrint.map((trip: TripRecord) => `
+      <tr style="background:${trip.contractorPaidDate ? '#f0fdf4' : '#fff'};">
+        <td>${trip.date}</td>
+        <td style="font-weight:700;">${trip.billNo}</td>
+        <td style="color:#2563eb;font-weight:700;">${trip.regNumber}</td>
+        <td>${trip.from} ➔ ${trip.to}</td>
+        <td style="font-weight:700;">${trip.netWeight}</td>
+        <td>₹${trip.rate}</td>
+        <td style="font-weight:700;">₹ ${Number(trip.tripTotal).toLocaleString('en-IN')}</td>
+        <td style="color:#1d4ed8;font-weight:700;">${trip.creditedAmount ? '₹ ' + Number(trip.creditedAmount).toLocaleString('en-IN') : '—'}</td>
+        <td style="text-align:center;">${trip.contractorPaidDate ? '✔' : '—'}</td>
+        <td>${trip.contractorPaidDate || '—'}</td>
+      </tr>
+    `).join('');
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+        <title>${title}</title>
+        <style>
+          @page { size: A4 landscape; margin: 8mm; }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: Arial, sans-serif; font-size: 9px; color: #1e293b; background: #fff; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start;
+            border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 10px; }
+          .header h1 { font-size: 14px; font-weight: 800; }
+          .header .sub { font-size: 7px; color: #94a3b8; text-transform: uppercase; font-weight: 700; margin-top: 2px; }
+          .header .company { font-size: 12px; font-weight: 900; color: #2563eb; }
+          .summary { display: flex; gap: 10px; margin-bottom: 8px; }
+          .summary div { flex: 1; border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 8px; }
+          .summary .label { font-size: 7px; font-weight: 700; text-transform: uppercase; }
+          .summary .val { font-size: 13px; font-weight: 800; }
+          .unpaid .label { color: #dc2626; } .unpaid .val { color: #1e293b; }
+          .paid .label { color: #16a34a; } .paid .val { color: #1e293b; }
+          .grand .label { color: #2563eb; } .grand .val { color: #1e293b; }
+          table { width: 100%; border-collapse: collapse; }
+          thead { display: table-header-group; }
+          th { background: #1e293b; color: #e2e8f0; padding: 4px 5px; font-size: 7.5px;
+               font-weight: 700; text-transform: uppercase; border: 1px solid #334155; text-align: left; }
+          td { padding: 3px 5px; font-size: 8px; border: 1px solid #e2e8f0; }
+          tbody tr { page-break-inside: avoid; }
+          tbody tr:nth-child(even) td { background: #f8fafc; }
+          .footer { margin-top: 8px; text-align: center; font-size: 7px; color: #94a3b8; font-style: italic; border-top: 1px solid #f1f5f9; padding-top: 4px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <h1>${title}</h1>
+            <div class="sub">TRIP TALLY &bull; ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+          </div>
+          <div class="company">ANJANEYA TRANSPORT</div>
+        </div>
+        <div class="summary">
+          <div class="unpaid"><div class="label">Unpaid Total</div><div class="val">₹${unpaidTotal.toLocaleString('en-IN')}</div><div class="label">${tripsToPrint.filter((t: TripRecord) => !t.contractorPaidDate).length} trips pending</div></div>
+          <div class="paid"><div class="label">Paid Total</div><div class="val">₹${paidTotal.toLocaleString('en-IN')}</div></div>
+          <div class="grand"><div class="label">Grand Total</div><div class="val">₹${(unpaidTotal + paidTotal).toLocaleString('en-IN')}</div></div>
+        </div>
+        <div style="margin-bottom:6px; font-size:9px; font-weight:700; color:#334155;">
+          Trips: ${selectedContractor} - ${selectedLoadType} &nbsp;
+          <span style="background:#dbeafe;color:#1d4ed8;padding:2px 6px;border-radius:10px;font-size:8px;">${tripsToPrint.length} Records</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Trip Date</th><th>Bill No</th><th>Vehicle</th><th>Route</th>
+              <th>Net Wt</th><th>Rate</th><th>Total Rent</th>
+              <th style="background:#1e3a5f;color:#bfdbfe;">Credited Amount</th>
+              <th>Paid?</th><th>Received Date</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="footer">Computer generated statement. Contact depot for discrepancies.</div>
+      </body>
+      </html>
+    `;
+
+    // Open in new window — works on mobile browsers without the "blocked" error
+    const pw = window.open('', '_blank', 'width=1200,height=800');
+    if (!pw) {
+      alert('Pop-up blocked! Please allow pop-ups for this site and try again.');
+      return;
+    }
+    pw.document.write(printContent);
+    pw.document.close();
+    pw.focus();
+    setTimeout(() => { pw.print(); pw.close(); }, 600);
   };
   // 1. DATA PREPARATION
   // A. Get all trips for the selected contractor (EXCLUDING Bill No 0 STRICTLY)
@@ -1716,7 +1809,7 @@ return (
                    <th className="px-4 py-3 bg-blue-50 text-blue-800">Credited Amount</th>
                    <th className="px-4 py-3 text-center">Paid?</th>
                    <th className="px-4 py-3">Received Date</th>
-                   <th className="px-4 py-3 text-center">Action</th>
+                   <th className="px-4 py-3 text-center no-print">Action</th>
                 </tr>
              </thead>
              <tbody className="divide-y divide-slate-100">
