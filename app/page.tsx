@@ -230,78 +230,90 @@ interface Notification {
 const printSection = (elementId: string, title: string) => {
   const element = document.getElementById(elementId);
   if (!element) return;
+  buildAndDownloadPrintHTML(title, element.innerHTML);
+};
 
-  // Build a standalone HTML document and open it in a new window for printing
-  // This avoids the "blocked from automatically printing" browser restriction
-  // and ensures ALL table data renders correctly on A4 paper.
-  const tableHTML = element.innerHTML;
+// Converts HTML content into a self-contained file and triggers a browser download.
+// The user opens the downloaded file and uses the browser's native Print / Save as PDF.
+// This is the ONLY approach that works on Android Chrome without popup-blocker issues.
+const buildAndDownloadPrintHTML = (title: string, bodyHTML: string) => {
+  const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const safeFileName = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
 
-  const printContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8"/>
-      <title>${title} — Anjaneya Transport</title>
-      <style>
-        @page { size: A4 landscape; margin: 8mm; }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Arial, sans-serif; font-size: 9px; color: #1e293b; background: #fff; }
-        .print-header { display: flex; justify-content: space-between; align-items: center;
-          border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 10px; }
-        .print-header h1 { font-size: 15px; font-weight: 800; }
-        .print-header .sub { font-size: 8px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-top: 2px; }
-        .print-header .company { font-size: 13px; font-weight: 900; color: #2563eb; }
-        table { width: 100%; border-collapse: collapse; table-layout: auto; }
-        thead { display: table-header-group; }
-        tbody tr { page-break-inside: avoid; }
-        th, td { padding: 3px 5px; border: 1px solid #cbd5e1; font-size: 8px; white-space: nowrap; }
-        th { background: #1e293b; color: #e2e8f0; font-weight: 700; text-transform: uppercase; }
-        .print-footer { margin-top: 10px; border-top: 1px solid #f1f5f9; text-align: center;
-          font-size: 7px; color: #94a3b8; font-style: italic; padding-top: 4px; }
-        /* Hide interactive / decorative UI only elements */
-        button, input, select, .no-print, svg { display: none !important; }
-        /* Summary stat cards — keep them visible but compact */
-        .grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-        .grid > div { border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 8px; flex: 1; min-width: 100px; }
-        /* Colour classes used in the table */
-        .bg-blue-900 { background: #1e3a5f !important; }
-        .text-blue-200 { color: #bfdbfe !important; }
-        .bg-red-900 { background: #7f1d1d !important; }
-        .text-red-200 { color: #fecaca !important; }
-        .bg-emerald-900 { background: #064e3b !important; }
-        .text-emerald-200 { color: #a7f3d0 !important; }
-        .bg-slate-800 { background: #1e293b !important; }
-        .text-slate-300 { color: #cbd5e1 !important; }
-        tr:nth-child(even) td { background: #f8fafc; }
-      </style>
-    </head>
-    <body>
-      <div class="print-header">
-        <div>
-          <h1>${title}</h1>
-          <div class="sub">Trip Tally &bull; ${new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })}</div>
-        </div>
-        <div class="company">ANJANEYA TRANSPORT</div>
-      </div>
-      ${tableHTML}
-      <div class="print-footer">Computer generated statement. Contact depot for discrepancies.</div>
-    </body>
-    </html>
-  `;
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>${title} — Anjaneya Transport</title>
+  <style>
+    @page { size: A4 landscape; margin: 8mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; font-size: 9px; color: #1e293b; background: #fff; }
+    .print-header { display: flex; justify-content: space-between; align-items: flex-start;
+      border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 10px; }
+    .print-header h1 { font-size: 15px; font-weight: 800; }
+    .print-header .sub { font-size: 8px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-top: 2px; }
+    .print-header .company { font-size: 13px; font-weight: 900; color: #2563eb; }
+    table { width: 100%; border-collapse: collapse; table-layout: auto; }
+    thead { display: table-header-group; }
+    tbody tr { page-break-inside: avoid; }
+    th, td { padding: 3px 5px; border: 1px solid #cbd5e1; font-size: 8px; white-space: nowrap; }
+    th { background: #1e293b; color: #e2e8f0; font-weight: 700; text-transform: uppercase; }
+    .print-footer { margin-top: 10px; border-top: 1px solid #f1f5f9; text-align: center;
+      font-size: 7px; color: #94a3b8; font-style: italic; padding-top: 4px; }
+    button, input, select, .no-print, svg { display: none !important; }
+    .grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .grid > div { border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 8px; flex: 1; min-width: 100px; }
+    .bg-blue-900 { background: #1e3a5f !important; }
+    .text-blue-200 { color: #bfdbfe !important; }
+    .bg-red-900 { background: #7f1d1d !important; }
+    .text-red-200 { color: #fecaca !important; }
+    .bg-emerald-900 { background: #064e3b !important; }
+    .text-emerald-200 { color: #a7f3d0 !important; }
+    .bg-slate-800 { background: #1e293b !important; }
+    .text-slate-300 { color: #cbd5e1 !important; }
+    tr:nth-child(even) td { background: #f8fafc; }
+    /* Auto-print when the file is opened in a browser */
+    @media screen {
+      body::after {
+        content: '';
+        display: block;
+      }
+    }
+  </style>
+  <script>
+    // Auto-trigger print dialog as soon as the file loads in browser
+    window.onload = function() {
+      setTimeout(function() { window.print(); }, 400);
+    };
+  </script>
+</head>
+<body>
+  <div class="print-header">
+    <div>
+      <h1>${title}</h1>
+      <div class="sub">Trip Tally &bull; ${dateStr}</div>
+    </div>
+    <div class="company">ANJANEYA TRANSPORT</div>
+  </div>
+  ${bodyHTML}
+  <div class="print-footer">Computer generated statement. Contact depot for discrepancies.</div>
+</body>
+</html>`;
 
-  const printWindow = window.open('', '_blank', 'width=1200,height=800');
-  if (!printWindow) {
-    alert('Pop-up blocked! Please allow pop-ups for this site and try again.');
-    return;
-  }
-  printWindow.document.write(printContent);
-  printWindow.document.close();
-  printWindow.focus();
-  // Small delay so styles and images render before the print dialog opens
-  setTimeout(() => {
-    printWindow.print();
-    printWindow.close();
-  }, 600);
+  // Create a blob and trigger a direct download — no popup window needed.
+  // On Android: the file downloads to the Downloads folder.
+  // Opening it in Chrome triggers the print dialog automatically via window.onload above.
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${safeFileName}_${new Date().toISOString().slice(0, 10)}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 };
 
 const DateFilter = ({ startDate, endDate, onStartChange, onEndChange }: any) => (
@@ -1518,16 +1530,8 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
       </html>
     `;
 
-    // Open in new window — works on mobile browsers without the "blocked" error
-    const pw = window.open('', '_blank', 'width=1200,height=800');
-    if (!pw) {
-      alert('Pop-up blocked! Please allow pop-ups for this site and try again.');
-      return;
-    }
-    pw.document.write(printContent);
-    pw.document.close();
-    pw.focus();
-    setTimeout(() => { pw.print(); pw.close(); }, 600);
+    // Download as HTML file — works on Android without any popup blocker issues
+    buildAndDownloadPrintHTML(title, printContent.replace(/^[\s\S]*<body[^>]*>/, '').replace(/<\/body>[\s\S]*$/, ''));
   };
   // 1. DATA PREPARATION
   // A. Get all trips for the selected contractor (EXCLUDING Bill No 0 STRICTLY)
