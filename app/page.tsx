@@ -251,24 +251,25 @@ const buildPrintHTML = (title: string, bodyHTML: string): string => {
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>${title} — Anjaneya Transport</title>
   <style>
-    @page { size: A4 landscape; margin: 8mm; }
+    @page { size: A4 landscape; margin: 6mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
     body { font-family: Arial, sans-serif; font-size: 9px; color: #1e293b; background: #fff; }
     .print-header { display: flex; justify-content: space-between; align-items: flex-start;
-      border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 10px; }
-    .print-header h1 { font-size: 15px; font-weight: 800; }
-    .print-header .sub { font-size: 8px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-top: 2px; }
-    .print-header .company { font-size: 13px; font-weight: 900; color: #2563eb; }
-    table { width: 100%; border-collapse: collapse; table-layout: auto; }
+      border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 6px; }
+    .print-header h1 { font-size: 13px; font-weight: 800; }
+    .print-header .sub { font-size: 7px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-top: 2px; }
+    .print-header .company { font-size: 11px; font-weight: 900; color: #2563eb; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     thead { display: table-header-group; }
     tbody tr { page-break-inside: avoid; }
-    th, td { padding: 3px 5px; border: 1px solid #cbd5e1; font-size: 8px; white-space: nowrap; }
+    th, td { padding: 2px 4px; border: 1px solid #cbd5e1; font-size: 7.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     th { background: #1e293b; color: #e2e8f0; font-weight: 700; text-transform: uppercase; }
-    .print-footer { margin-top: 10px; border-top: 1px solid #f1f5f9; text-align: center;
-      font-size: 7px; color: #94a3b8; font-style: italic; padding-top: 4px; }
+    .print-footer { margin-top: 6px; border-top: 1px solid #f1f5f9; text-align: center;
+      font-size: 6px; color: #94a3b8; font-style: italic; padding-top: 3px; }
     button, input, select, .no-print, svg { display: none !important; }
-    .grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-    .grid > div { border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 8px; flex: 1; min-width: 100px; }
+    .grid { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+    .grid > div { border: 1px solid #e2e8f0; border-radius: 4px; padding: 3px 6px; flex: 1; min-width: 80px; }
     .bg-blue-900 { background: #1e3a5f !important; }
     .text-blue-200 { color: #bfdbfe !important; }
     .bg-red-900 { background: #7f1d1d !important; }
@@ -1461,29 +1462,31 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
         <title>${title}</title>
         <style>
-          @page { size: A4 landscape; margin: 8mm; }
+          @page { size: A4 landscape; margin: 6mm; }
           * { box-sizing: border-box; margin: 0; padding: 0; }
-          body { font-family: Arial, sans-serif; font-size: 9px; color: #1e293b; background: #fff; }
+          html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+          body { font-family: Arial, sans-serif; font-size: 8px; color: #1e293b; background: #fff; }
           .header { display: flex; justify-content: space-between; align-items: flex-start;
-            border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 10px; }
-          .header h1 { font-size: 14px; font-weight: 800; }
-          .header .sub { font-size: 7px; color: #94a3b8; text-transform: uppercase; font-weight: 700; margin-top: 2px; }
-          .header .company { font-size: 12px; font-weight: 900; color: #2563eb; }
-          .summary { display: flex; gap: 10px; margin-bottom: 8px; }
-          .summary div { flex: 1; border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 8px; }
-          .summary .label { font-size: 7px; font-weight: 700; text-transform: uppercase; }
-          .summary .val { font-size: 13px; font-weight: 800; }
+            border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 6px; }
+          .header h1 { font-size: 12px; font-weight: 800; }
+          .header .sub { font-size: 6px; color: #94a3b8; text-transform: uppercase; font-weight: 700; margin-top: 2px; }
+          .header .company { font-size: 10px; font-weight: 900; color: #2563eb; }
+          .summary { display: flex; gap: 8px; margin-bottom: 6px; }
+          .summary div { flex: 1; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 6px; }
+          .summary .label { font-size: 6px; font-weight: 700; text-transform: uppercase; }
+          .summary .val { font-size: 11px; font-weight: 800; }
           .unpaid .label { color: #dc2626; } .unpaid .val { color: #1e293b; }
           .paid .label { color: #16a34a; } .paid .val { color: #1e293b; }
           .grand .label { color: #2563eb; } .grand .val { color: #1e293b; }
-          table { width: 100%; border-collapse: collapse; }
+          .table-wrap { width: 100%; overflow: hidden; }
+          table { width: 100%; border-collapse: collapse; table-layout: fixed; }
           thead { display: table-header-group; }
-          th { background: #1e293b; color: #e2e8f0; padding: 4px 5px; font-size: 7.5px;
-               font-weight: 700; text-transform: uppercase; border: 1px solid #334155; text-align: left; }
-          td { padding: 3px 5px; font-size: 8px; border: 1px solid #e2e8f0; }
+          th { background: #1e293b; color: #e2e8f0; padding: 3px 4px; font-size: 7px;
+               font-weight: 700; text-transform: uppercase; border: 1px solid #334155; text-align: left; white-space: nowrap; overflow: hidden; }
+          td { padding: 2px 4px; font-size: 7.5px; border: 1px solid #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
           tbody tr { page-break-inside: avoid; }
           tbody tr:nth-child(even) td { background: #f8fafc; }
-          .footer { margin-top: 8px; text-align: center; font-size: 7px; color: #94a3b8; font-style: italic; border-top: 1px solid #f1f5f9; padding-top: 4px; }
+          .footer { margin-top: 6px; text-align: center; font-size: 6px; color: #94a3b8; font-style: italic; border-top: 1px solid #f1f5f9; padding-top: 3px; }
         </style>
         <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 500); };</script>
       </head>
@@ -1504,17 +1507,19 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
           Trips: ${selectedContractor} - ${selectedLoadType} &nbsp;
           <span style="background:#dbeafe;color:#1d4ed8;padding:2px 6px;border-radius:10px;font-size:8px;">${tripsToPrint.length} Records</span>
         </div>
+        <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Trip Date</th><th>Bill No</th><th>Vehicle</th><th>Route</th>
-              <th>Net Wt</th><th>Rate</th><th>Total Rent</th>
-              <th style="background:#1e3a5f;color:#bfdbfe;">Credited Amount</th>
-              <th>Paid?</th><th>Received Date</th>
+              <th style="width:10%">Trip Date</th><th style="width:12%">Bill No</th><th style="width:13%">Vehicle</th><th style="width:18%">Route</th>
+              <th style="width:8%">Net Wt</th><th style="width:6%">Rate</th><th style="width:11%">Total Rent</th>
+              <th style="width:12%;background:#1e3a5f;color:#bfdbfe;">Credited Amount</th>
+              <th style="width:5%">Paid?</th><th style="width:10%">Received Date</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
         </table>
+        </div>
         <div class="footer">Computer generated statement. Contact depot for discrepancies.</div>
       </body>
       </html>
@@ -2521,31 +2526,33 @@ const totalExpenses = Math.round(
 <html>
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no"/>
   <title>Financial Report — Anjaneya Transport</title>
   <style>
-    @page { size: A4 landscape; margin: 8mm; }
+    @page { size: A4 landscape; margin: 6mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; font-size: 8px; color: #1e293b; background: #fff; }
+    html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+    body { font-family: Arial, sans-serif; font-size: 7px; color: #1e293b; background: #fff; }
     .header { display: flex; justify-content: space-between; align-items: flex-start;
-      border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 8px; }
-    .header h1 { font-size: 14px; font-weight: 800; }
-    .header .sub { font-size: 7px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-top: 2px; }
-    .header .company { font-size: 12px; font-weight: 900; color: #2563eb; }
-    .summary { display: flex; gap: 8px; margin-bottom: 8px; }
-    .summary div { flex: 1; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 8px; }
-    .summary .slabel { font-size: 6.5px; font-weight: 700; text-transform: uppercase; color: #64748b; }
-    .summary .sval { font-size: 12px; font-weight: 800; color: #1e293b; }
-    .section-title { font-size: 9px; font-weight: 700; color: #334155; margin-bottom: 4px; }
-    .badge { background: #e2e8f0; color: #475569; padding: 1px 6px; border-radius: 8px; font-size: 7px; font-weight: 700; margin-left: 6px; }
-    table { width: 100%; border-collapse: collapse; table-layout: auto; }
+      border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 6px; }
+    .header h1 { font-size: 12px; font-weight: 800; }
+    .header .sub { font-size: 6px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-top: 2px; }
+    .header .company { font-size: 10px; font-weight: 900; color: #2563eb; }
+    .summary { display: flex; gap: 6px; margin-bottom: 6px; }
+    .summary div { flex: 1; border: 1px solid #e2e8f0; border-radius: 4px; padding: 3px 6px; }
+    .summary .slabel { font-size: 6px; font-weight: 700; text-transform: uppercase; color: #64748b; }
+    .summary .sval { font-size: 10px; font-weight: 800; color: #1e293b; }
+    .section-title { font-size: 8px; font-weight: 700; color: #334155; margin-bottom: 3px; }
+    .badge { background: #e2e8f0; color: #475569; padding: 1px 5px; border-radius: 8px; font-size: 6px; font-weight: 700; margin-left: 4px; }
+    .table-wrap { width: 100%; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     thead { display: table-header-group; }
     tbody tr { page-break-inside: avoid; }
-    th { background: #1e293b; color: #e2e8f0; padding: 3px 4px; font-size: 7px;
-         font-weight: 700; text-transform: uppercase; border: 1px solid #334155; text-align: left; white-space: nowrap; }
-    td { padding: 2px 4px; font-size: 7.5px; border: 1px solid #e2e8f0; white-space: nowrap; }
+    th { background: #1e293b; color: #e2e8f0; padding: 2px 3px; font-size: 6px;
+         font-weight: 700; text-transform: uppercase; border: 1px solid #334155; text-align: left; white-space: nowrap; overflow: hidden; }
+    td { padding: 2px 3px; font-size: 6.5px; border: 1px solid #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     tbody tr:nth-child(even) td { background: #f8fafc; }
-    .footer { margin-top: 8px; text-align: center; font-size: 7px; color: #94a3b8; font-style: italic; border-top: 1px solid #f1f5f9; padding-top: 4px; }
+    .footer { margin-top: 6px; text-align: center; font-size: 6px; color: #94a3b8; font-style: italic; border-top: 1px solid #f1f5f9; padding-top: 3px; }
   </style>
   <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 500); };</script>
 </head>
@@ -2564,23 +2571,25 @@ const totalExpenses = Math.round(
     <div><div class="slabel">Net Profit</div><div class="sval">₹ ${totalProfit.toLocaleString('en-IN')}</div></div>
   </div>
   <div class="section-title">Detailed Transaction Log <span class="badge">${filteredTrips.length} Records</span></div>
+  <div class="table-wrap">
   <table>
     <thead>
       <tr>
-        <th>Date</th><th>Bill No</th><th>Vehicle</th><th>Driver</th><th>Route</th>
-        <th>Contractor</th><th>Load</th><th>Net Wt</th><th>Rate</th>
-        <th style="background:#1e3a5f;color:#bfdbfe;">Total Rent</th>
-        <th style="color:#fb923c;">Advance</th>
-        <th>Weighbridge</th><th>Loading</th><th>Unloading</th>
-        <th style="background:#4c0519;color:#fecdd3;">Extra Exp</th>
-        <th style="color:#86efac;">Dr Pay</th>
-        <th>Diesel L</th><th>Fuel ₹</th>
-        <th style="background:#7f1d1d;color:#fecaca;">Total Exp</th>
-        <th style="background:#14532d;color:#bbf7d0;">Profit</th>
+        <th style="width:5%">Date</th><th style="width:5%">Bill No</th><th style="width:5%">Vehicle</th><th style="width:5%">Driver</th><th style="width:9%">Route</th>
+        <th style="width:5%">Contractor</th><th style="width:4%">Load</th><th style="width:4%">Net Wt</th><th style="width:3%">Rate</th>
+        <th style="width:5%;background:#1e3a5f;color:#bfdbfe;">Total Rent</th>
+        <th style="width:4%;color:#fb923c;">Advance</th>
+        <th style="width:4%">Weighbridge</th><th style="width:4%">Loading</th><th style="width:4%">Unloading</th>
+        <th style="width:4%;background:#4c0519;color:#fecdd3;">Extra Exp</th>
+        <th style="width:4%;color:#86efac;">Dr Pay</th>
+        <th style="width:4%">Diesel L</th><th style="width:4%">Fuel ₹</th>
+        <th style="width:5%;background:#7f1d1d;color:#fecaca;">Total Exp</th>
+        <th style="width:5%;background:#14532d;color:#bbf7d0;">Profit</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
   </table>
+  </div>
   <div class="footer">Computer generated statement. Contact depot for discrepancies.</div>
 </body>
 </html>`;
