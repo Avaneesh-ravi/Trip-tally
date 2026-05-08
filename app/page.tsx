@@ -18,8 +18,8 @@ const CONTRACTOR_LOADS: Record<string, string[]> = {
   "Null":["Null"],
   "KSP": ["Maize", "Rape Seed", "Soya", "Fertilizer"],
   "TKS": ["Fertilizer"],
-  "SBT": ["Rice", "Wheat", "Fertilizer", "Maize", "Sugar", "SOYA","Cement"],
-  "MP SAMY": ["Rape Seed","Wheat"],
+  "SBT": ["Rice", "Wheat", "Fertilizer", "Maize", "Sugar", "SOYA"],
+  "MP SAMY": ["Rape Seed"],
   "SS":["Maize"],
   "KGS":["Sugar"],
 };
@@ -231,108 +231,77 @@ const printSection = (elementId: string, title: string) => {
   const element = document.getElementById(elementId);
   if (!element) return;
 
-  // Inject print-only styles
-  const styleId = 'trip-tally-print-style';
-  let styleEl = document.getElementById(styleId) as HTMLStyleElement | null;
-  if (!styleEl) {
-    styleEl = document.createElement('style');
-    styleEl.id = styleId;
-    document.head.appendChild(styleEl);
-  }
-  styleEl.textContent = `
-    @media print {
-      @page { size: landscape; margin: 8mm; }
-      body > * { display: none !important; }
-      #print-overlay { display: block !important; }
-      #print-overlay * {
-        visibility: visible !important;
-        overflow: visible !important;
-      }
-      #print-overlay table {
-        width: 100% !important;
-        border-collapse: collapse !important;
-        page-break-inside: auto !important;
-      }
-      #print-overlay tr {
-        page-break-inside: avoid !important;
-        page-break-after: auto !important;
-      }
-      #print-overlay thead {
-        display: table-header-group !important;
-      }
-      #print-overlay tfoot {
-        display: table-footer-group !important;
-      }
-      #print-overlay th, #print-overlay td {
-        padding: 4px 6px !important;
-        font-size: 9px !important;
-        border: 1px solid #e2e8f0 !important;
-        white-space: nowrap !important;
-      }
-    }
-  `;
+  // Build a standalone HTML document and open it in a new window for printing
+  // This avoids the "blocked from automatically printing" browser restriction
+  // and ensures ALL table data renders correctly on A4 paper.
+  const tableHTML = element.innerHTML;
 
-  // Remove any existing overlay
-  const existingOverlay = document.getElementById('print-overlay');
-  if (existingOverlay) existingOverlay.remove();
-
-  // Use position:absolute (NOT fixed) so content is never viewport-clipped
-  const overlay = document.createElement('div');
-  overlay.id = 'print-overlay';
-  overlay.style.cssText = [
-    'display: none',
-    'position: absolute',
-    'top: 0',
-    'left: 0',
-    'width: 100%',
-    'min-height: 100%',
-    'background: white',
-    'z-index: 99999',
-    'padding: 16px',
-    'box-sizing: border-box',
-    'font-family: sans-serif',
-    'font-size: 11px',
-    'overflow: visible',
-  ].join('; ');
-
-  overlay.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:2px solid #e2e8f0; padding-bottom:8px;">
-      <div>
-        <h1 style="font-size:18px; font-weight:800; color:#1e293b; margin:0;">${title}</h1>
-        <p style="font-size:9px; color:#94a3b8; margin:2px 0 0; font-weight:700; text-transform:uppercase;">Trip Tally \u2022 ${new Date().toLocaleDateString()}</p>
+  const printContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8"/>
+      <title>${title} — Anjaneya Transport</title>
+      <style>
+        @page { size: A4 landscape; margin: 8mm; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; font-size: 9px; color: #1e293b; background: #fff; }
+        .print-header { display: flex; justify-content: space-between; align-items: center;
+          border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 10px; }
+        .print-header h1 { font-size: 15px; font-weight: 800; }
+        .print-header .sub { font-size: 8px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-top: 2px; }
+        .print-header .company { font-size: 13px; font-weight: 900; color: #2563eb; }
+        table { width: 100%; border-collapse: collapse; table-layout: auto; }
+        thead { display: table-header-group; }
+        tbody tr { page-break-inside: avoid; }
+        th, td { padding: 3px 5px; border: 1px solid #cbd5e1; font-size: 8px; white-space: nowrap; }
+        th { background: #1e293b; color: #e2e8f0; font-weight: 700; text-transform: uppercase; }
+        .print-footer { margin-top: 10px; border-top: 1px solid #f1f5f9; text-align: center;
+          font-size: 7px; color: #94a3b8; font-style: italic; padding-top: 4px; }
+        /* Hide interactive / decorative UI only elements */
+        button, input, select, .no-print, svg { display: none !important; }
+        /* Summary stat cards — keep them visible but compact */
+        .grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+        .grid > div { border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 8px; flex: 1; min-width: 100px; }
+        /* Colour classes used in the table */
+        .bg-blue-900 { background: #1e3a5f !important; }
+        .text-blue-200 { color: #bfdbfe !important; }
+        .bg-red-900 { background: #7f1d1d !important; }
+        .text-red-200 { color: #fecaca !important; }
+        .bg-emerald-900 { background: #064e3b !important; }
+        .text-emerald-200 { color: #a7f3d0 !important; }
+        .bg-slate-800 { background: #1e293b !important; }
+        .text-slate-300 { color: #cbd5e1 !important; }
+        tr:nth-child(even) td { background: #f8fafc; }
+      </style>
+    </head>
+    <body>
+      <div class="print-header">
+        <div>
+          <h1>${title}</h1>
+          <div class="sub">Trip Tally &bull; ${new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })}</div>
+        </div>
+        <div class="company">ANJANEYA TRANSPORT</div>
       </div>
-      <p style="font-size:15px; font-weight:900; color:#2563eb; margin:0;">ANJANEYA TRANSPORT</p>
-    </div>
-    <div style="overflow:visible; width:100%;">
-      ${element.innerHTML}
-    </div>
-    <div style="margin-top:12px; padding-top:8px; border-top:1px solid #f1f5f9; text-align:center;">
-      <p style="font-size:8px; color:#cbd5e1; font-style:italic;">Computer generated statement. Contact depot for discrepancies.</p>
-    </div>
+      ${tableHTML}
+      <div class="print-footer">Computer generated statement. Contact depot for discrepancies.</div>
+    </body>
+    </html>
   `;
 
-  document.body.appendChild(overlay);
-
-  // Strip interactive / no-print elements from the overlay
-  overlay.querySelectorAll('.no-print, button, input[type="checkbox"], select').forEach((el: any) => el.style.display = 'none');
-
-  // Remove overflow restrictions from all containers so the full table is never clipped
-  overlay.querySelectorAll('*').forEach((el: any) => {
-    const cs = window.getComputedStyle(el);
-    if (['hidden','auto','scroll'].includes(cs.overflow)) (el as HTMLElement).style.overflow = 'visible';
-    if (['auto','scroll'].includes(cs.overflowX)) (el as HTMLElement).style.overflowX = 'visible';
-    if (['auto','scroll'].includes(cs.overflowY)) (el as HTMLElement).style.overflowY = 'visible';
-    if (cs.maxHeight && cs.maxHeight !== 'none') (el as HTMLElement).style.maxHeight = 'none';
-    if (cs.height && cs.height !== 'auto') (el as HTMLElement).style.height = 'auto';
-  });
-
-  window.print();
-
-  // Cleanup after print dialog closes
+  const printWindow = window.open('', '_blank', 'width=1200,height=800');
+  if (!printWindow) {
+    alert('Pop-up blocked! Please allow pop-ups for this site and try again.');
+    return;
+  }
+  printWindow.document.write(printContent);
+  printWindow.document.close();
+  printWindow.focus();
+  // Small delay so styles and images render before the print dialog opens
   setTimeout(() => {
-    overlay.remove();
-    if (styleEl) styleEl.textContent = '';
-  }, 1500);
+    printWindow.print();
+    printWindow.close();
+  }, 600);
 };
 
 const DateFilter = ({ startDate, endDate, onStartChange, onEndChange }: any) => (
@@ -1953,6 +1922,16 @@ const FuelView = ({ trips, filterReg, setFilterReg, setTrips }: any) => {
 const TripsView = ({ trips, setTrips, handleFilterSelect, handleDeleteTrip }: any) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    // Default to the current calendar month
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  // Build list of available months from trip data (newest first)
+  const availableMonths = Array.from(
+    new Set(trips.filter((t: any) => String(t.billNo) !== "0" && t.date).map((t: any) => t.date.slice(0, 7)))
+  ).sort((a: any, b: any) => b.localeCompare(a)) as string[];
 
   const handleToggleBillReceived = async (tripId: number, current: boolean) => {
     const newVal = !current;
@@ -1962,6 +1941,8 @@ const TripsView = ({ trips, setTrips, handleFilterSelect, handleDeleteTrip }: an
 
   const filteredTrips = trips.filter((t: any) => {
     if (String(t.billNo) === "0") return false;
+    // Month dropdown takes priority over date range
+    if (selectedMonth) return t.date && t.date.startsWith(selectedMonth);
     if (!startDate && !endDate) return true;
     const tripDate = new Date(t.date);
     const start = startDate ? new Date(startDate) : new Date('1900-01-01');
@@ -1971,9 +1952,31 @@ const TripsView = ({ trips, setTrips, handleFilterSelect, handleDeleteTrip }: an
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-3">
         <h2 className="text-lg font-bold">Trip History & Earnings</h2>
-        <DateFilter startDate={startDate} endDate={endDate} onStartChange={setStartDate} onEndChange={setEndDate} />
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Month Dropdown — same pattern as Finance page */}
+          <div className="flex items-center gap-2 bg-white border border-slate-200 p-1.5 rounded-lg shadow-sm">
+            <Calendar size={14} className="text-slate-400"/>
+            <select
+              className="text-xs border-none outline-none text-slate-700 font-medium bg-transparent"
+              value={selectedMonth}
+              onChange={(e) => { setSelectedMonth(e.target.value); setStartDate(''); setEndDate(''); }}
+            >
+              <option value="">All Months</option>
+              {availableMonths.map((m: string) => {
+                const [year, month] = m.split('-');
+                const label = new Date(Number(year), Number(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+                return <option key={m} value={m}>{label}</option>;
+              })}
+            </select>
+            {selectedMonth && (
+              <button onClick={() => setSelectedMonth('')} className="ml-1 p-1 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded"><X size={12}/></button>
+            )}
+          </div>
+          {/* Date range only shows when no month is selected */}
+          {!selectedMonth && <DateFilter startDate={startDate} endDate={endDate} onStartChange={setStartDate} onEndChange={setEndDate} />}
+        </div>
       </div>
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
         <table className="w-full text-sm text-left">
@@ -2305,7 +2308,11 @@ const DriversView = ({ drivers, setDrivers, trips, setTrips, currentUser }: any)
 const FinanceView = ({ transactions, drivers, trips, handleDeleteTrip }: any) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState(''); // e.g. "2025-06"
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    // Default to the current calendar month, e.g. "2026-05"
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   // Build list of months from trips data
   const availableMonths = Array.from(
