@@ -1485,6 +1485,7 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
           tbody tr:nth-child(even) td { background: #f8fafc; }
           .footer { margin-top: 8px; text-align: center; font-size: 7px; color: #94a3b8; font-style: italic; border-top: 1px solid #f1f5f9; padding-top: 4px; }
         </style>
+        <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 500); };</script>
       </head>
       <body>
         <div class="header">
@@ -2472,6 +2473,120 @@ const totalExpenses = Math.round(
     a.setAttribute('hidden', ''); a.setAttribute('href', url); a.setAttribute('download', `Finance_Report.csv`);
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
+
+  // Build Finance print from DATA — avoids overflow-y-auto clipping that causes blank space in PDF
+  const handlePrintFinance = () => {
+    if (filteredTrips.length === 0) { alert("No data to print"); return; }
+    const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const label = selectedMonth
+      ? new Date(Number(selectedMonth.split('-')[0]), Number(selectedMonth.split('-')[1]) - 1)
+          .toLocaleString('default', { month: 'long', year: 'numeric' })
+      : 'All Months';
+
+    const rows = filteredTrips.map((trip: TripRecord) => {
+      const drPay = Math.round(Number(trip.driverTripPay) || 0);
+      const tripTotal = Math.round(Number(trip.tripTotal) || 0);
+      const tripExpense = Math.round(
+        (Number(trip.loadingCharge) || 0) + (Number(trip.unloadingCharge) || 0) +
+        (Number(trip.dieselPrice) || 0) + (Number(trip.weighbridgeCharge) || 0) +
+        drPay + (Number(trip.expense) || 0)
+      );
+      const profit = tripTotal - tripExpense;
+      return `
+        <tr>
+          <td>${trip.date}</td>
+          <td style="font-family:monospace;">${trip.billNo}</td>
+          <td style="font-weight:700;">${trip.regNumber}</td>
+          <td>${trip.driverName}</td>
+          <td>${trip.from} - ${trip.to}</td>
+          <td>${trip.contractor}</td>
+          <td>${trip.loadType}</td>
+          <td style="text-align:right;font-weight:700;">${trip.netWeight}</td>
+          <td style="text-align:right;">₹${trip.rate}</td>
+          <td style="text-align:right;font-weight:700;background:#eff6ff;color:#1d4ed8;">₹${tripTotal.toLocaleString('en-IN')}</td>
+          <td style="text-align:right;color:#ea580c;">₹${Number(trip.advance||0).toLocaleString('en-IN')}</td>
+          <td style="text-align:right;">₹${Number(trip.weighbridgeCharge||0).toLocaleString('en-IN')}</td>
+          <td style="text-align:right;">₹${Number(trip.loadingCharge||0).toLocaleString('en-IN')}</td>
+          <td style="text-align:right;">₹${Number(trip.unloadingCharge||0).toLocaleString('en-IN')}</td>
+          <td style="text-align:right;background:#fff1f2;color:#dc2626;">₹${Number(trip.expense||0).toLocaleString('en-IN')}</td>
+          <td style="text-align:right;color:#16a34a;font-weight:700;">₹${drPay.toLocaleString('en-IN')}</td>
+          <td style="text-align:right;">${trip.dieselLiters||0} L</td>
+          <td style="text-align:right;">₹${Number(trip.dieselPrice||0).toLocaleString('en-IN')}</td>
+          <td style="text-align:right;font-weight:700;background:#fff1f2;color:#b91c1c;">₹${tripExpense.toLocaleString('en-IN')}</td>
+          <td style="text-align:right;font-weight:700;${profit >= 0 ? 'background:#f0fdf4;color:#15803d;' : 'background:#fff1f2;color:#dc2626;'}">₹${profit.toLocaleString('en-IN')}</td>
+        </tr>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Financial Report — Anjaneya Transport</title>
+  <style>
+    @page { size: A4 landscape; margin: 8mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; font-size: 8px; color: #1e293b; background: #fff; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start;
+      border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 8px; }
+    .header h1 { font-size: 14px; font-weight: 800; }
+    .header .sub { font-size: 7px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-top: 2px; }
+    .header .company { font-size: 12px; font-weight: 900; color: #2563eb; }
+    .summary { display: flex; gap: 8px; margin-bottom: 8px; }
+    .summary div { flex: 1; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 8px; }
+    .summary .slabel { font-size: 6.5px; font-weight: 700; text-transform: uppercase; color: #64748b; }
+    .summary .sval { font-size: 12px; font-weight: 800; color: #1e293b; }
+    .section-title { font-size: 9px; font-weight: 700; color: #334155; margin-bottom: 4px; }
+    .badge { background: #e2e8f0; color: #475569; padding: 1px 6px; border-radius: 8px; font-size: 7px; font-weight: 700; margin-left: 6px; }
+    table { width: 100%; border-collapse: collapse; table-layout: auto; }
+    thead { display: table-header-group; }
+    tbody tr { page-break-inside: avoid; }
+    th { background: #1e293b; color: #e2e8f0; padding: 3px 4px; font-size: 7px;
+         font-weight: 700; text-transform: uppercase; border: 1px solid #334155; text-align: left; white-space: nowrap; }
+    td { padding: 2px 4px; font-size: 7.5px; border: 1px solid #e2e8f0; white-space: nowrap; }
+    tbody tr:nth-child(even) td { background: #f8fafc; }
+    .footer { margin-top: 8px; text-align: center; font-size: 7px; color: #94a3b8; font-style: italic; border-top: 1px solid #f1f5f9; padding-top: 4px; }
+  </style>
+  <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 500); };</script>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>Financial Report</h1>
+      <div class="sub">Trip Tally &bull; ${dateStr} &bull; ${label}</div>
+    </div>
+    <div class="company">ANJANEYA TRANSPORT</div>
+  </div>
+  <div class="summary">
+    <div><div class="slabel">Revenue</div><div class="sval">₹ ${totalRentRevenue.toLocaleString('en-IN')}</div></div>
+    <div><div class="slabel">Total Fuel</div><div class="sval">${totalFuelLiters.toLocaleString('en-IN')} L</div></div>
+    <div><div class="slabel">Total Expense</div><div class="sval">₹ ${totalExpenses.toLocaleString('en-IN')}</div></div>
+    <div><div class="slabel">Net Profit</div><div class="sval">₹ ${totalProfit.toLocaleString('en-IN')}</div></div>
+  </div>
+  <div class="section-title">Detailed Transaction Log <span class="badge">${filteredTrips.length} Records</span></div>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th><th>Bill No</th><th>Vehicle</th><th>Driver</th><th>Route</th>
+        <th>Contractor</th><th>Load</th><th>Net Wt</th><th>Rate</th>
+        <th style="background:#1e3a5f;color:#bfdbfe;">Total Rent</th>
+        <th style="color:#fb923c;">Advance</th>
+        <th>Weighbridge</th><th>Loading</th><th>Unloading</th>
+        <th style="background:#4c0519;color:#fecdd3;">Extra Exp</th>
+        <th style="color:#86efac;">Dr Pay</th>
+        <th>Diesel L</th><th>Fuel ₹</th>
+        <th style="background:#7f1d1d;color:#fecaca;">Total Exp</th>
+        <th style="background:#14532d;color:#bbf7d0;">Profit</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="footer">Computer generated statement. Contact depot for discrepancies.</div>
+</body>
+</html>`;
+
+    openPrintTab(html);
+  };
     
   return (
     <div className="h-full flex flex-col space-y-4">
@@ -2504,7 +2619,7 @@ const totalExpenses = Math.round(
             {!selectedMonth && <DateFilter startDate={startDate} endDate={endDate} onStartChange={setStartDate} onEndChange={setEndDate} />}
             <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>
             <button onClick={handleDownloadExcel} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md transition-all active:scale-95"><Download size={16}/> Excel</button>
-            <button onClick={() => printSection('finance-print-area', 'Financial Report')} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md transition-all active:scale-95"><Printer size={16}/> Print</button>
+            <button onClick={handlePrintFinance} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md transition-all active:scale-95"><Printer size={16}/> Print</button>
           </div>
       </div>
 
