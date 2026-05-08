@@ -2528,8 +2528,8 @@ const totalExpenses = Math.round(
   <style>
     @page { size: A4 landscape; margin: 8mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { width: 1200px; }
-    body { width: 1200px; font-family: Arial, sans-serif; font-size: 8px; color: #1e293b; background: #fff; }
+    html { width: 1200px; height: auto; }
+    body { width: 1200px; height: auto; min-height: 0; font-family: Arial, sans-serif; font-size: 8px; color: #1e293b; background: #fff; }
     .header { display: flex; justify-content: space-between; align-items: flex-start;
       border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 8px; }
     .header h1 { font-size: 14px; font-weight: 800; }
@@ -2550,9 +2550,9 @@ const totalExpenses = Math.round(
     tbody tr:nth-child(even) td { background: #f8fafc; }
     .footer { margin-top: 8px; text-align: center; font-size: 7px; color: #94a3b8; font-style: italic; border-top: 1px solid #f1f5f9; padding-top: 4px; }
   </style>
-  <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 500); };</script>
+  <script>window.onload = function(){ requestAnimationFrame(function(){ requestAnimationFrame(function(){ window.print(); }); }); };</script>
 </head>
-<body>
+<body style="height:auto;min-height:0;">
   <div class="header">
     <div>
       <h1>Financial Report</h1>
