@@ -227,20 +227,24 @@ interface Notification {
 
 // --- HELPERS ---
 
-const printSection = (elementId: string, title: string) => {
-  const element = document.getElementById(elementId);
-  if (!element) return;
-  buildAndDownloadPrintHTML(title, element.innerHTML);
+// Opens a blob URL in a new tab (treated as a user gesture on Android — never blocked).
+// The embedded window.onload script auto-triggers the print dialog immediately on open.
+const openPrintTab = (html: string) => {
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 };
 
-// Converts HTML content into a self-contained file and triggers a browser download.
-// The user opens the downloaded file and uses the browser's native Print / Save as PDF.
-// This is the ONLY approach that works on Android Chrome without popup-blocker issues.
-const buildAndDownloadPrintHTML = (title: string, bodyHTML: string) => {
+const buildPrintHTML = (title: string, bodyHTML: string): string => {
   const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-  const safeFileName = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-
-  const html = `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8"/>
@@ -274,20 +278,8 @@ const buildAndDownloadPrintHTML = (title: string, bodyHTML: string) => {
     .bg-slate-800 { background: #1e293b !important; }
     .text-slate-300 { color: #cbd5e1 !important; }
     tr:nth-child(even) td { background: #f8fafc; }
-    /* Auto-print when the file is opened in a browser */
-    @media screen {
-      body::after {
-        content: '';
-        display: block;
-      }
-    }
   </style>
-  <script>
-    // Auto-trigger print dialog as soon as the file loads in browser
-    window.onload = function() {
-      setTimeout(function() { window.print(); }, 400);
-    };
-  </script>
+  <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 500); };</script>
 </head>
 <body>
   <div class="print-header">
@@ -301,19 +293,12 @@ const buildAndDownloadPrintHTML = (title: string, bodyHTML: string) => {
   <div class="print-footer">Computer generated statement. Contact depot for discrepancies.</div>
 </body>
 </html>`;
+};
 
-  // Create a blob and trigger a direct download — no popup window needed.
-  // On Android: the file downloads to the Downloads folder.
-  // Opening it in Chrome triggers the print dialog automatically via window.onload above.
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${safeFileName}_${new Date().toISOString().slice(0, 10)}.html`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
+const printSection = (elementId: string, title: string) => {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  openPrintTab(buildPrintHTML(title, element.innerHTML));
 };
 
 const DateFilter = ({ startDate, endDate, onStartChange, onEndChange }: any) => (
@@ -548,7 +533,8 @@ if (tData) {
     const deductions = (Number(tripToDelete.advance) || 0) + 
                        (Number(tripToDelete.loadingCharge) || 0) + 
                        (Number(tripToDelete.unloadingCharge) || 0) + 
-                       (Number(tripToDelete.weighbridgeCharge) || 0);
+                       (Number(tripToDelete.weighbridgeCharge) || 0) +
+                       (Number(tripToDelete.expense) || 0);
     const netAddedToWallet = (Number(tripToDelete.driverTripPay) || 0) - deductions;
 
     const driver = drivers.find(d => d.name === tripToDelete.driverName);
@@ -656,7 +642,10 @@ if (tData) {
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         {/* HEADER */}
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 shrink-0 relative">
-          <div className="md:hidden font-bold text-lg flex items-center gap-2"><Truck className="text-blue-600"/> Trip Tally</div>
+          <div className="md:hidden font-bold text-lg flex items-center gap-2">
+            <img src="/logo.png" alt="Anjaneya Logo" className="w-7 h-7 object-contain rounded"/>
+            Anjaneya
+          </div>
           <div className="hidden md:flex items-center gap-2 font-bold text-lg text-slate-700 capitalize">
             {currentView} Overview 
             {filterReg && <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full flex items-center gap-1"><Filter size={10}/> {filterReg} <button onClick={() => setFilterReg(null)}><X size={12}/></button></span>}
@@ -1530,8 +1519,8 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
       </html>
     `;
 
-    // Download as HTML file — works on Android without any popup blocker issues
-    buildAndDownloadPrintHTML(title, printContent.replace(/^[\s\S]*<body[^>]*>/, '').replace(/<\/body>[\s\S]*$/, ''));
+    // Open blob URL in new tab — works on both desktop and Android without popup blocker
+    openPrintTab(printContent);
   };
   // 1. DATA PREPARATION
   // A. Get all trips for the selected contractor (EXCLUDING Bill No 0 STRICTLY)
@@ -3548,15 +3537,25 @@ const DriverHistoryView = ({ trips, drivers }: any) => {
   const [selectedDriver, setSelectedDriver] = useState<string>('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  const availableMonths = Array.from(
+    new Set(trips.filter((t: any) => String(t.billNo) !== "0" && t.date).map((t: any) => t.date.slice(0, 7)))
+  ).sort((a: any, b: any) => b.localeCompare(a)) as string[];
 
   const filteredTrips = trips.filter((t: any) => {
     const matchesDriver = selectedDriver ? t.driverName === selectedDriver : true;
     const isNotPlaceholder = String(t.billNo) !== "0";
-    if (!startDate && !endDate) return matchesDriver && isNotPlaceholder;
+    if (!matchesDriver || !isNotPlaceholder) return false;
+    if (selectedMonth) return t.date && t.date.startsWith(selectedMonth);
+    if (!startDate && !endDate) return true;
     const tripDate = new Date(t.date);
     const start = startDate ? new Date(startDate) : new Date('1900-01-01');
     const end = endDate ? new Date(endDate) : new Date('2100-01-01');
-    return matchesDriver && isNotPlaceholder && tripDate >= start && tripDate <= end;
+    return tripDate >= start && tripDate <= end;
   });
 
   // --- EXCEL DOWNLOAD LOGIC ---
@@ -3600,7 +3599,26 @@ const DriverHistoryView = ({ trips, drivers }: any) => {
             <option value="">All Drivers</option>
             {drivers.map((d: any) => <option key={d.id} value={d.name}>{d.name}</option>)}
           </select>
-          <DateFilter startDate={startDate} endDate={endDate} onStartChange={setStartDate} onEndChange={setEndDate} />
+          {/* Month Dropdown */}
+          <div className="flex items-center gap-2 bg-white border border-slate-200 p-1.5 rounded-lg shadow-sm">
+            <Calendar size={14} className="text-slate-400"/>
+            <select
+              className="text-xs border-none outline-none text-slate-700 font-medium bg-transparent"
+              value={selectedMonth}
+              onChange={(e) => { setSelectedMonth(e.target.value); setStartDate(''); setEndDate(''); }}
+            >
+              <option value="">All Months</option>
+              {availableMonths.map((m: string) => {
+                const [year, month] = m.split('-');
+                const label = new Date(Number(year), Number(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+                return <option key={m} value={m}>{label}</option>;
+              })}
+            </select>
+            {selectedMonth && (
+              <button onClick={() => setSelectedMonth('')} className="ml-1 p-1 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded"><X size={12}/></button>
+            )}
+          </div>
+          {!selectedMonth && <DateFilter startDate={startDate} endDate={endDate} onStartChange={setStartDate} onEndChange={setEndDate} />}
           
           {/* ACTION BUTTONS */}
           <div className="flex gap-2 border-l pl-3 ml-1">
