@@ -2477,6 +2477,12 @@ const FinanceView = ({ transactions, drivers, trips, handleDeleteTrip }: any) =>
     const start = startDate ? new Date(startDate) : new Date('1900-01-01');
     const end = endDate ? new Date(endDate) : new Date('2100-01-01');
     return tripDate >= start && tripDate <= end;
+  }).sort((a: any, b: any) => {
+    const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
+    if (dateDiff !== 0) return dateDiff;
+    if (a.regNumber < b.regNumber) return -1;
+    if (a.regNumber > b.regNumber) return 1;
+    return 0;
   });
 
   // 2. CALCULATIONS (Rounded)
