@@ -271,17 +271,76 @@ const buildPrintHTML = (title: string, bodyHTML: string): string => {
     .print-footer { margin-top: 10px; border-top: 1px solid #f1f5f9; text-align: center;
       font-size: 7px; color: #94a3b8; font-style: italic; padding-top: 4px; }
     button, input, select, .no-print, svg { display: none !important; }
-    .grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-    .grid > div { border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 8px; flex: 1; min-width: 100px; }
-    .bg-blue-900 { background: #1e3a5f !important; }
-    .text-blue-200 { color: #bfdbfe !important; }
-    .bg-red-900 { background: #7f1d1d !important; }
-    .text-red-200 { color: #fecaca !important; }
-    .bg-emerald-900 { background: #064e3b !important; }
-    .text-emerald-200 { color: #a7f3d0 !important; }
-    .bg-slate-800 { background: #1e293b !important; }
-    .text-slate-300 { color: #cbd5e1 !important; }
+    .grid { display: grid; gap: 1rem; margin-bottom: 1.5rem; }
+    .grid-cols-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid-cols-5 { grid-template-columns: repeat(5, minmax(0,1fr)); }
+    .grid > div { border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1rem; }
     tr:nth-child(even) td:not([style]) { background: #f8fafc; }
+    /* ── Header column colours ── */
+    .bg-blue-900   { background: #1e3a5f !important; }
+    .bg-slate-800  { background: #1e293b !important; }
+    .bg-slate-700  { background: #334155 !important; }
+    .bg-red-900    { background: #7f1d1d !important; }
+    .bg-emerald-900 { background: #064e3b !important; }
+    /* ── Header text colours ── */
+    .text-blue-200   { color: #bfdbfe !important; }
+    .text-red-200    { color: #fecaca !important; }
+    .text-emerald-200 { color: #a7f3d0 !important; }
+    .text-slate-300  { color: #cbd5e1 !important; }
+    .text-white      { color: #ffffff !important; }
+    /* ── Cell text colours ── */
+    .text-orange-400 { color: #fb923c !important; }
+    .text-orange-600 { color: #ea580c !important; }
+    .text-red-300    { color: #fca5a5 !important; }
+    .text-red-400    { color: #f87171 !important; }
+    .text-red-500    { color: #ef4444 !important; }
+    .text-red-600    { color: #dc2626 !important; }
+    .text-green-400  { color: #4ade80 !important; }
+    .text-green-600  { color: #16a34a !important; }
+    .text-blue-600   { color: #2563eb !important; }
+    .text-blue-700   { color: #1d4ed8 !important; }
+    .text-emerald-600 { color: #059669 !important; }
+    .text-slate-400  { color: #94a3b8 !important; }
+    .text-slate-600  { color: #475569 !important; }
+    .text-slate-700  { color: #334155 !important; }
+    .text-slate-800  { color: #1e293b !important; }
+    /* ── Cell background colours ── */
+    .bg-blue-50    { background: #eff6ff !important; }
+    .bg-red-50     { background: #fef2f2 !important; }
+    .bg-emerald-50 { background: #ecfdf5 !important; }
+    .bg-indigo-50  { background: #eef2ff !important; }
+    .bg-indigo-100 { background: #e0e7ff !important; }
+    .bg-white      { background: #ffffff !important; }
+    /* ── Border colours ── */
+    .border-l-indigo-600 { border-left-color: #4f46e5 !important; }
+    .border-slate-100 { border-color: #f1f5f9 !important; }
+    .border-blue-100  { border-color: #dbeafe !important; }
+    .border-l-4    { border-left-width: 4px !important; border-left-style: solid !important; }
+    /* ── Typography ── */
+    .font-bold     { font-weight: 700 !important; }
+    .font-extrabold { font-weight: 800 !important; }
+    .font-mono     { font-family: monospace !important; }
+    .text-center   { text-align: center !important; }
+    .text-right    { text-align: right !important; }
+    .uppercase     { text-transform: uppercase !important; }
+    .text-xs  { font-size: 0.75rem !important; }
+    .text-xl  { font-size: 1.25rem !important; }
+    .text-2xl { font-size: 1.5rem !important; }
+    /* ── Spacing & layout ── */
+    .px-2 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+    .py-1 { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
+    .px-4 { padding-left: 1rem !important; padding-right: 1rem !important; }
+    .py-3 { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+    .p-4  { padding: 1rem !important; }
+    .mb-6 { margin-bottom: 1.5rem !important; }
+    .gap-4 { gap: 1rem !important; }
+    .rounded-xl  { border-radius: 0.75rem !important; }
+    .rounded-md  { border-radius: 0.375rem !important; }
+    .shadow-sm   { box-shadow: 0 1px 2px rgba(0,0,0,.05) !important; }
+    .shadow-md   { box-shadow: 0 4px 6px rgba(0,0,0,.1) !important; }
+    .overflow-hidden { overflow: hidden !important; }
+    .w-full { width: 100% !important; }
+    .border { border-width: 1px !important; border-style: solid !important; }
   </style>
   <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 500); };</script>
 </head>
