@@ -25,8 +25,8 @@ const CONTRACTOR_LOADS: Record<string, string[]> = {
 };
 
 const DESTINATION_RATES = [
-  { name: "Null", rate: 0 },{ name: "RGS", rate: 295 },
-  { name: "Perundurai-41", rate: 295 },{ name: "Perundurai-42", rate: 295 },{ name: "Perundurai-43", rate: 295 },{ name: "Perundurai-KK8", rate: 295 }
+  { name: "Null", rate: 0 },{ name: "RGS", rate: 300 },
+  { name: "Perundurai-41", rate: 300 },{ name: "Perundurai-42", rate: 300 },{ name: "Perundurai-43", rate: 300 },{ name: "Perundurai-KK8", rate: 300 }
   ,{ name: "SKM", rate: 180 },{ name: "KK Nagar", rate: 0 },{ name: "Thirumagal", rate: 0 },{ name: "SVM", rate: 0 },{ name: "SK Samy", rate: 0 },{ name: "Moolapalayam", rate: 90 },{ name: "Perundurai", rate: 295 },{ name: "Tiruvachi", rate: 200 },{ name: "Athani", rate: 430 }, { name: "Anthiyur", rate: 430 }, { name: "Ammapettai", rate: 445 },
   { name: "Arachalur", rate: 370 }, { name: "Alangiyam", rate: 600 }, { name: "Alukuli", rate: 460 },
   { name: "Avinashi", rate: 550 }, { name: "Hanumanpalli", rate: 350 }, { name: "Appakudal", rate: 410 },
@@ -964,7 +964,7 @@ const handleDestinationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     if (specialDestinations.includes(value)) {
       const weight = Number(tripForm.netWeight) || 0;
       // Formula: ((weight * 45) + 30)
-      unloading = weight > 0 ? Math.round((weight * 45) + 30).toString() : "0";
+      unloading = weight > 0 ? Math.round((weight * 50) + 30).toString() : "0";
       
       // Maize rule: if load is Maize, weighbridge is 0, else 130
       weighbridge = tripForm.loadType === "Maize" ? "0" : "130";
@@ -993,7 +993,7 @@ if (field === 'netWeight') {
   const specialDestinations = ["RGS", "Perundurai-41", "Perundurai-42", "Perundurai-43", "Perundurai-KK8"];
   if (specialDestinations.includes(updatedForm.to)) {
     const weight = Number(value) || 0;
-    updatedForm.unloadingCharge = Math.round((weight * 45) + 30).toString();
+    updatedForm.unloadingCharge = Math.round((weight * 50) + 30).toString();
   }
 }
 
@@ -1001,7 +1001,7 @@ if (field === 'netWeight') {
   // --- AUTO-CALCULATE RGS UNLOADING WHEN WEIGHT CHANGES ---
   if (field === 'netWeight' && updatedForm.to === 'RGS') {
     const weight = Number(value) || 0;
-    updatedForm.unloadingCharge = Math.round((45 * weight) + 30).toString();
+    updatedForm.unloadingCharge = Math.round((50 * weight) + 30).toString();
   }
 
   // --- REST OF YOUR EXISTING LOGIC ---
@@ -1440,7 +1440,7 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
       .reduce((s: number, t: TripRecord) => s + (Number(t.tripTotal) || 0), 0);
 
     const rows = tripsToPrint.map((trip: TripRecord) => `
-      <tr style="background:${trip.contractorPaidDate ? '#f0fdf4' : '#fff'};">
+      <tr>
         <td>${trip.date}</td>
         <td style="font-weight:700;">${trip.billNo}</td>
         <td style="color:#2563eb;font-weight:700;">${trip.regNumber}</td>
@@ -1448,9 +1448,6 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
         <td style="font-weight:700;">${trip.netWeight}</td>
         <td>₹${trip.rate}</td>
         <td style="font-weight:700;">₹ ${Number(trip.tripTotal).toLocaleString('en-IN')}</td>
-        <td style="color:#1d4ed8;font-weight:700;">${trip.creditedAmount ? '₹ ' + Number(trip.creditedAmount).toLocaleString('en-IN') : '—'}</td>
-        <td style="text-align:center;">${trip.contractorPaidDate ? '✔' : '—'}</td>
-        <td>${trip.contractorPaidDate || '—'}</td>
       </tr>
     `).join('');
 
@@ -1459,13 +1456,13 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
       <html>
       <head>
         <meta charset="utf-8"/>
-        <meta name="viewport" content="width=900"/>
+        <meta name="viewport" content="width=1100"/>
         <title>${title}</title>
         <style>
           @page { size: A4 landscape; margin: 8mm; }
           * { box-sizing: border-box; margin: 0; padding: 0; }
-          html { width: 900px; }
-          body { width: 900px; font-family: Arial, sans-serif; font-size: 9px; color: #1e293b; background: #fff; }
+          html { width: 1100px; }
+          body { width: 1100px; font-family: Arial, sans-serif; font-size: 9px; color: #1e293b; background: #fff; }
           .header { display: flex; justify-content: space-between; align-items: flex-start;
             border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 10px; }
           .header h1 { font-size: 14px; font-weight: 800; }
@@ -1480,9 +1477,9 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
           .grand .label { color: #2563eb; } .grand .val { color: #1e293b; }
           table { width: 100%; border-collapse: collapse; }
           thead { display: table-header-group; }
-          th { background: #1e293b; color: #e2e8f0; padding: 4px 5px; font-size: 7.5px;
+          th { background: #1e293b; color: #e2e8f0; padding: 8px 16px; font-size: 9px;
                font-weight: 700; text-transform: uppercase; border: 1px solid #334155; text-align: left; }
-          td { padding: 3px 5px; font-size: 8px; border: 1px solid #e2e8f0; }
+          td { padding: 6px 16px; font-size: 9px; border: 1px solid #e2e8f0; }
           tbody tr { page-break-inside: avoid; }
           tbody tr:nth-child(even) td { background: #f8fafc; }
           .footer { margin-top: 8px; text-align: center; font-size: 7px; color: #94a3b8; font-style: italic; border-top: 1px solid #f1f5f9; padding-top: 4px; }
@@ -1511,8 +1508,6 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
             <tr>
               <th>Trip Date</th><th>Bill No</th><th>Vehicle</th><th>Route</th>
               <th>Net Wt</th><th>Rate</th><th>Total Rent</th>
-              <th style="background:#1e3a5f;color:#bfdbfe;">Credited Amount</th>
-              <th>Paid?</th><th>Received Date</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
