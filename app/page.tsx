@@ -265,6 +265,9 @@ const buildPrintHTML = (title: string, bodyHTML: string): string => {
     tbody tr { page-break-inside: avoid; }
     th, td { padding: 3px 5px; border: 1px solid #cbd5e1; font-size: 8px; white-space: nowrap; }
     th { background: #1e293b; color: #e2e8f0; font-weight: 700; text-transform: uppercase; }
+    th[style] { background: unset; color: unset; }
+    td[style*="background"] { background: unset; }
+    td[style*="color"] { color: unset; }
     .print-footer { margin-top: 10px; border-top: 1px solid #f1f5f9; text-align: center;
       font-size: 7px; color: #94a3b8; font-style: italic; padding-top: 4px; }
     button, input, select, .no-print, svg { display: none !important; }
@@ -278,7 +281,7 @@ const buildPrintHTML = (title: string, bodyHTML: string): string => {
     .text-emerald-200 { color: #a7f3d0 !important; }
     .bg-slate-800 { background: #1e293b !important; }
     .text-slate-300 { color: #cbd5e1 !important; }
-    tr:nth-child(even) td { background: #f8fafc; }
+    tr:nth-child(even) td:not([style]) { background: #f8fafc; }
   </style>
   <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 500); };</script>
 </head>
@@ -1479,9 +1482,12 @@ const AmountCreditedView = ({ trips, setTrips, handleDeleteTrip }: any) => {
           thead { display: table-header-group; }
           th { background: #1e293b; color: #e2e8f0; padding: 8px 16px; font-size: 9px;
                font-weight: 700; text-transform: uppercase; border: 1px solid #334155; text-align: left; }
+          th[style] { background: unset; color: unset; }
           td { padding: 6px 16px; font-size: 9px; border: 1px solid #e2e8f0; }
+          td[style*="background"] { background: unset; }
+          td[style*="color"] { color: unset; }
           tbody tr { page-break-inside: avoid; }
-          tbody tr:nth-child(even) td { background: #f8fafc; }
+          tbody tr:nth-child(even) td:not([style]) { background: #f8fafc; }
           .footer { margin-top: 8px; text-align: center; font-size: 7px; color: #94a3b8; font-style: italic; border-top: 1px solid #f1f5f9; padding-top: 4px; }
         </style>
         <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 500); };</script>
@@ -2541,8 +2547,11 @@ const totalExpenses = Math.round(
     tbody tr { page-break-inside: avoid; }
     th { background: #1e293b; color: #e2e8f0; padding: 3px 4px; font-size: 7px;
          font-weight: 700; text-transform: uppercase; border: 1px solid #334155; text-align: left; white-space: nowrap; }
+    th[style] { background: unset; color: unset; }
     td { padding: 2px 4px; font-size: 7.5px; border: 1px solid #e2e8f0; white-space: nowrap; }
-    tbody tr:nth-child(even) td { background: #f8fafc; }
+    td[style*="background"] { background: unset; }
+    td[style*="color"] { color: unset; }
+    tbody tr:nth-child(even) td:not([style]) { background: #f8fafc; }
     .footer { margin-top: 8px; text-align: center; font-size: 7px; color: #94a3b8; font-style: italic; border-top: 1px solid #f1f5f9; padding-top: 4px; }
   </style>
   <script>window.onload = function(){ requestAnimationFrame(function(){ requestAnimationFrame(function(){ window.print(); }); }); };</script>
